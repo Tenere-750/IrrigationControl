@@ -1,0 +1,174 @@
+{
+  "elements": [
+    {
+      "type": "Label",
+      "caption": "IrrigationControl v1.0 - Konfiguration"
+    },
+    {
+      "type": "Group",
+      "caption": "Global",
+      "items": [
+        {
+          "type": "NumberSpinner",
+          "name": "PumpVariableID",
+          "caption": "Pump Variable ID",
+          "validate": [
+            "required"
+          ]
+        },
+        {
+          "type": "NumberSpinner",
+          "name": "ValveActuationTime",
+          "caption": "Valve actuation time (seconds)",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 7
+        },
+        {
+          "type": "CheckBox",
+          "name": "MasterSwitchDefault",
+          "caption": "MasterSwitch default ON?"
+        }
+      ]
+    },
+    {
+      "type": "Group",
+      "caption": "Zones",
+      "items": [
+        {
+          "type": "Label",
+          "caption": "Zone 1"
+        },
+        {
+          "type": "Row",
+          "items": [
+            {
+              "type": "TextBox",
+              "name": "ZoneName1",
+              "caption": "Name"
+            },
+            {
+              "type": "NumberSpinner",
+              "name": "ValveVar1",
+              "caption": "Valve Variable ID"
+            }
+          ]
+        },
+        {
+          "type": "Label",
+          "caption": "Zone 2"
+        },
+        {
+          "type": "Row",
+          "items": [
+            {
+              "type": "TextBox",
+              "name": "ZoneName2",
+              "caption": "Name"
+            },
+            {
+              "type": "NumberSpinner",
+              "name": "ValveVar2",
+              "caption": "Valve Variable ID"
+            }
+          ]
+        },
+        {
+          "type": "Label",
+          "caption": "Zone 3"
+        },
+        {
+          "type": "Row",
+          "items": [
+            {
+              "type": "TextBox",
+              "name": "ZoneName3",
+              "caption": "Name"
+            },
+            {
+              "type": "NumberSpinner",
+              "name": "ValveVar3",
+              "caption": "Valve Variable ID"
+            }
+          ]
+        },
+        {
+          "type": "Label",
+          "caption": "Zone 4"
+        },
+        {
+          "type": "Row",
+          "items": [
+            {
+              "type": "TextBox",
+              "name": "ZoneName4",
+              "caption": "Name"
+            },
+            {
+              "type": "NumberSpinner",
+              "name": "ValveVar4",
+              "caption": "Valve Variable ID"
+            }
+          ]
+        },
+        {
+          "type": "Label",
+          "caption": "Zone 5"
+        },
+        {
+          "type": "Row",
+          "items": [
+            {
+              "type": "TextBox",
+              "name": "ZoneName5",
+              "caption": "Name"
+            },
+            {
+              "type": "NumberSpinner",
+              "name": "ValveVar5",
+              "caption": "Valve Variable ID"
+            }
+          ]
+        },
+        {
+          "type": "Label",
+          "caption": "Zone 6"
+        },
+        {
+          "type": "Row",
+          "items": [
+            {
+              "type": "TextBox",
+              "name": "ZoneName6",
+              "caption": "Name"
+            },
+            {
+              "type": "NumberSpinner",
+              "name": "ValveVar6",
+              "caption": "Valve Variable ID"
+            }
+          ]
+        },
+        {
+          "type": "Label",
+          "caption": "Zone 7"
+        },
+        {
+          "type": "Row",
+          "items": [
+            {
+              "type": "TextBox",
+              "name": "ZoneName7",
+              "caption": "Name"
+            },
+            {
+              "type": "NumberSpinner",
+              "name": "ValveVar7",
+              "caption": "Valve Variable ID"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
