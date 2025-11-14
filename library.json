@@ -1,0 +1,24 @@
+{
+  "id": "{E1A2B3C4-D5F6-4789-ABCD-0123456789AB}",
+  "name": "IrrigationControl",
+  "author": "J Bucholzki",
+  "url": "https://github.com/bucholzki/IrrigationControl",
+  "version": "1.0.0",
+  "build": 1,
+  "date": 20251114,
+  "compatibility": {
+    "version": "8.1"
+  },
+  "modules": [
+    {
+      "id": "{3B8208F2-6C01-4E76-B1AF-E0E274C90991}",
+      "name": "IrrigationControl",
+      "type": 3,
+      "vendor": "bucholzki",
+      "aliases": [
+        "Irrigation Control System"
+      ],
+      "prefix": "IRR"
+    }
+  ]
+}
