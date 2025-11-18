@@ -1,127 +1,82 @@
 {
-    "elements": [
-
+  "elements": [
+    {
+      "type": "Label",
+      "caption": "Allgemeine Einstellungen"
+    },
+    {
+      "name": "PumpInstance",
+      "type": "SelectInstance",
+      "caption": "Pumpen KNX Instanz",
+      "multiple": false,
+      "filter": "KNX"
+    },
+    {
+      "name": "MasterSwitch",
+      "type": "SelectInstance",
+      "caption": "Master KNX Instanz (optional)",
+      "multiple": false,
+      "filter": "KNX"
+    },
+    {
+      "type": "Label",
+      "caption": "Zonen"
+    },
+    {
+      "name": "Zones",
+      "type": "List",
+      "caption": "Bewässerungszonen",
+      "add": true,
+      "delete": true,
+      "columns": [
         {
-            "type": "ExpansionPanel",
-            "caption": "Allgemeine Einstellungen",
-            "items": [
-                {
-                    "type": "SelectObject",
-                    "name": "MasterSwitchID",
-                    "caption": "Master-Switch Variable"
-                },
-                {
-                    "type": "SelectObject",
-                    "name": "PumpID",
-                    "caption": "Pumpen KNX Instanz"
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "ValveTravelTime",
-                    "caption": "Ventil Fahrzeit (Sekunden)",
-                    "minimum": 1,
-                    "maximum": 60
-                }
-            ]
+          "caption": "Name",
+          "name": "Name",
+          "width": "200px",
+          "edit": true,
+          "type": "ValidationTextBox"
         },
-
         {
-            "type": "ExpansionPanel",
-            "caption": "Zonen Konfiguration",
-            "items": [
-                {
-                    "type": "List",
-                    "name": "Zones",
-                    "caption": "Zonen",
-                    "rowCount": 7,
-                    "add": false,
-                    "delete": false,
-                    "sort": false,
-                    "columns": [
-                        {
-                            "caption": "Zonenname",
-                            "name": "Name",
-                            "width": "200px",
-                            "edit": { "type": "ValidationTextBox" }
-                        },
-                        {
-                            "caption": "KNX Ventil Instanz",
-                            "name": "ValveID",
-                            "width": "200px",
-                            "edit": { "type": "SelectObject" }
-                        }
-                    ]
-                }
-            ]
+          "caption": "Ventil KNX Instanz",
+          "name": "ValveInstance",
+          "width": "250px",
+          "edit": { "type": "SelectInstance", "filter": "KNX" }
         },
-
         {
-            "type": "ExpansionPanel",
-            "caption": "Manuelle Steuerung",
-            "items": [
-
-                {
-                    "type": "List",
-                    "name": "ManualZones",
-                    "caption": "Zonen",
-                    "rowCount": 7,
-                    "add": false,
-                    "delete": false,
-                    "sort": false,
-                    "rowSelector": "Index",
-                    "columns": [
-                        {
-                            "caption": "Auswählen",
-                            "name": "Selected",
-                            "width": "80px",
-                            "edit": { "type": "CheckBox" }
-                        },
-                        {
-                            "caption": "Zone",
-                            "name": "Name",
-                            "width": "200px",
-                            "edit": false
-                        },
-                        {
-                            "caption": "Index",
-                            "name": "Index",
-                            "visible": false
-                        }
-                    ],
-                    "onValueChange": "IPS_RequestAction($id, 'ToggleZone', $row['Index']);"
-                },
-
-                {
-                    "type": "Button",
-                    "caption": "Ausgewählte Zonen öffnen",
-                    "onClick": "IPS_RequestAction($id, 'OpenSelectedZones', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Ausgewählte Zonen schließen",
-                    "onClick": "IPS_RequestAction($id, 'CloseSelectedZones', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Pumpe EIN",
-                    "onClick": "IPS_RequestAction($id, 'PumpOn', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Pumpe AUS",
-                    "onClick": "IPS_RequestAction($id, 'PumpOff', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Master EIN",
-                    "onClick": "IPS_RequestAction($id, 'MasterOn', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Master AUS",
-                    "onClick": "IPS_RequestAction($id, 'MasterOff', true);"
-                }
-            ]
+          "caption": "Dauer (Minuten)",
+          "name": "Duration",
+          "width": "120px",
+          "edit": "NumberSpinner"
+        },
+        {
+          "caption": "Manuell EIN",
+          "name": "ManualOn",
+          "width": "120px",
+          "type": "Button",
+          "caption": "Einschalten",
+          "onClick": "ManuellZoneSwitch($id, true);"
+        },
+        {
+          "caption": "Manuell AUS",
+          "name": "ManualOff",
+          "width": "120px",
+          "type": "Button",
+          "caption": "Ausschalten",
+          "onClick": "ManuellZoneSwitch($id, false);"
         }
-    ]
+      ]
+    }
+  ],
+
+  "actions": [
+    {
+      "type": "Label",
+      "caption": "Aktionen"
+    },
+    {
+      "type": "Button",
+      "caption": "Alle Zonen AUS",
+      "onClick": "SwitchAllOff();"
+    }
+  ]
 }
