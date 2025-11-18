@@ -11,16 +11,17 @@ class IrrigationControl extends IPSModule
         $this->RegisterPropertyInteger("PumpID", 0);
         $this->RegisterPropertyInteger("ValveTravelTime", 7);
 
+        // 7 Zonen initialisieren
         $zones = [];
-        for ($i = 1; $i <= 7; $i++) {
+        for ($i = 0; $i < 7; $i++) {
             $zones[] = [
-                "Name"    => "Zone $i",
+                "Name"    => "Zone " . ($i + 1),
                 "ValveID" => 0
             ];
         }
         $this->RegisterPropertyString("Zones", json_encode($zones));
 
-        // Buffer für manuelle Auswahl
+        // Buffer für Auswahl
         $this->SetBuffer("Manual", json_encode(array_fill(0, 7, false)));
     }
 
@@ -31,26 +32,26 @@ class IrrigationControl extends IPSModule
 
     public function GetConfigurationForm()
     {
-        $form = json_decode(file_get_contents(__DIR__ . "/form.json"), true);
-
+        $form   = json_decode(file_get_contents(__DIR__ . "/form.json"), true);
         $zones  = json_decode($this->ReadPropertyString("Zones"), true);
         $manual = json_decode($this->GetBuffer("Manual"), true);
 
-        // --- Zonen und Manuell-Steuerung auffüllen ---
+        // Zonen füllen
         foreach ($form["elements"] as &$panel) {
-            if (!isset($panel["items"])) {
+
+            if (!isset($panel["items"]))
                 continue;
-            }
 
             foreach ($panel["items"] as &$item) {
 
-                // Zonenliste (Konfiguration)
+                // Konfigurationsliste
                 if ($item["type"] === "List" && $item["name"] === "Zones") {
                     $item["values"] = $zones;
                 }
 
-                // Manuelle Steuerung
+                // Manuelle Liste
                 if ($item["type"] === "List" && $item["name"] === "ManualZones") {
+
                     $rows = [];
                     foreach ($zones as $i => $z) {
                         $rows[] = [
@@ -59,6 +60,7 @@ class IrrigationControl extends IPSModule
                             "Selected" => (bool)$manual[$i]
                         ];
                     }
+
                     $item["values"] = $rows;
                 }
             }
@@ -72,7 +74,7 @@ class IrrigationControl extends IPSModule
         switch ($Ident) {
 
             case "ToggleZone":
-                $this->UpdateManualSelection($Value);
+                $this->UpdateManualSelection((int)$Value);
                 break;
 
             case "OpenSelectedZones":
@@ -101,12 +103,12 @@ class IrrigationControl extends IPSModule
         }
     }
 
-    private function UpdateManualSelection($jsonRow)
+    private function UpdateManualSelection(int $index)
     {
-        $row = json_decode($jsonRow, true);
-
         $manual = json_decode($this->GetBuffer("Manual"), true);
-        $manual[(int)$row["Index"]] = (bool)$row["Selected"];
+
+        // Toggle der Auswahl
+        $manual[$index] = !$manual[$index];
 
         $this->SetBuffer("Manual", json_encode($manual));
     }
@@ -138,8 +140,9 @@ class IrrigationControl extends IPSModule
         $this->Pump(true);
         IPS_Sleep($travel * 1000);
 
-        // Zonen öffnen
+        // Alle ausgewählten Zonen öffnen
         foreach ($zones as $i => $z) {
+
             if ($manual[$i] && $z["ValveID"] > 0) {
                 KNX_WriteDPT1($z["ValveID"], true);
             }
@@ -153,6 +156,7 @@ class IrrigationControl extends IPSModule
 
         // Zonen schließen
         foreach ($zones as $i => $z) {
+
             if ($manual[$i] && $z["ValveID"] > 0) {
                 KNX_WriteDPT1($z["ValveID"], false);
             }
