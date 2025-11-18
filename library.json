@@ -1,0 +1,24 @@
+
+  "id": "{A2E4A65F-7E11-46C0-B3A5-3FE66FBE1F0E}",
+  "name": "IrrigationControl",
+  "author": "J Bucholzki",
+  "url": "https://github.com/Tenere-750/IrrigationControl",
+  "version": "1.0",
+  "build": 1,
+  "date": 20251118,
+  "compatibility": {
+    "version": "8.1"
+  },
+  "modules": [
+    {
+      "id": "{3B8208F2-6C01-4E76-B1AF-E0E274C90991}",
+      "name": "IrrigationControl",
+      "type": 3,
+      "vendor": "bucholzki",
+      "aliases": [
+        "Irrigation Control System"
+      ]
+    }
+  ]
+}
+
