@@ -1,23 +1,24 @@
 {
     "elements": [
+
         {
             "type": "ExpansionPanel",
             "caption": "Allgemeine Einstellungen",
             "items": [
                 {
-                    "type": "NumberSpinner",
+                    "type": "SelectObject",
                     "name": "MasterSwitchID",
-                    "caption": "Master-Switch ID"
+                    "caption": "Master-Switch Variable"
                 },
                 {
-                    "type": "NumberSpinner",
+                    "type": "SelectObject",
                     "name": "PumpID",
-                    "caption": "Pumpen KNX ID"
+                    "caption": "Pumpen KNX Instanz"
                 },
                 {
                     "type": "NumberSpinner",
                     "name": "ValveTravelTime",
-                    "caption": "Ventil Verfahrzeit (Sekunden)",
+                    "caption": "Ventil Fahrzeit (Sekunden)",
                     "minimum": 1,
                     "maximum": 60
                 }
@@ -33,22 +34,22 @@
                     "name": "Zones",
                     "caption": "Zonen",
                     "rowCount": 7,
-                    "add": true,
-                    "delete": true,
+                    "add": false,
+                    "delete": false,
+                    "sort": false,
+
                     "columns": [
                         {
-                            "caption": "Name",
+                            "caption": "Zonenname",
                             "name": "Name",
-                            "edit": {
-                                "type": "ValidationTextBox"
-                            }
+                            "width": "200px",
+                            "edit": { "type": "ValidationTextBox" }
                         },
                         {
-                            "caption": "Valve KNX ID",
+                            "caption": "Ventil KNX Instanz",
                             "name": "ValveID",
-                            "edit": {
-                                "type": "NumberSpinner"
-                            }
+                            "width": "200px",
+                            "edit": { "type": "SelectObject" }
                         }
                     ]
                 }
@@ -59,22 +60,28 @@
             "type": "ExpansionPanel",
             "caption": "Manuelle Steuerung",
             "items": [
+
                 {
                     "type": "List",
                     "name": "ManualZones",
                     "caption": "Zonen",
                     "rowCount": 7,
+                    "add": false,
+                    "delete": false,
+                    "sort": false,
+
                     "columns": [
                         {
                             "caption": "Zone",
-                            "name": "Name"
+                            "name": "Name",
+                            "width": "200px",
+                            "edit": false
                         },
                         {
                             "caption": "Auswählen",
                             "name": "Selected",
-                            "edit": {
-                                "type": "CheckBox"
-                            }
+                            "width": "80px",
+                            "edit": { "type": "CheckBox" }
                         },
                         {
                             "caption": "Index",
@@ -82,6 +89,7 @@
                             "visible": false
                         }
                     ],
+
                     "onEdit": "IPS_RequestAction($id, 'ToggleZone', json_encode($row));"
                 },
 
