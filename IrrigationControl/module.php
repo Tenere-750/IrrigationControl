@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 class IrrigationControl extends IPSModule
 {
@@ -7,22 +6,9 @@ class IrrigationControl extends IPSModule
     {
         parent::Create();
 
-        $this->RegisterPropertyInteger("MasterSwitchID", 0);
-        $this->RegisterPropertyInteger("PumpID", 0);
-        $this->RegisterPropertyInteger("ValveTravelTime", 7);
-
-        // 7 Zonen initialisieren
-        $zones = [];
-        for ($i = 0; $i < 7; $i++) {
-            $zones[] = [
-                "Name"    => "Zone " . ($i + 1),
-                "ValveID" => 0
-            ];
-        }
-        $this->RegisterPropertyString("Zones", json_encode($zones));
-
-        // Buffer für Auswahl
-        $this->SetBuffer("Manual", json_encode(array_fill(0, 7, false)));
+        $this->RegisterPropertyInteger("PumpInstance", 0);
+        $this->RegisterPropertyInteger("MasterSwitch", 0);
+        $this->RegisterPropertyString("Zones", "[]");
     }
 
     public function ApplyChanges()
@@ -30,141 +16,81 @@ class IrrigationControl extends IPSModule
         parent::ApplyChanges();
     }
 
-    public function GetConfigurationForm()
+
+    // --------------------------------------------------------
+    // MANUELLES SCHALTEN EINER ZONE
+    // --------------------------------------------------------
+    public function ManuellZoneSwitch(int $ZoneIndex, bool $State)
     {
-        $form   = json_decode(file_get_contents(__DIR__ . "/form.json"), true);
-        $zones  = json_decode($this->ReadPropertyString("Zones"), true);
-        $manual = json_decode($this->GetBuffer("Manual"), true);
+        $zones = json_decode($this->ReadPropertyString("Zones"), true);
 
-        // Zonen füllen
-        foreach ($form["elements"] as &$panel) {
+        if (!isset($zones[$ZoneIndex])) {
+            IPS_LogMessage("Irrigation", "Zone $ZoneIndex existiert nicht");
+            return;
+        }
 
-            if (!isset($panel["items"]))
-                continue;
+        $zone = $zones[$ZoneIndex];
+        $valve = intval($zone["ValveInstance"]);
 
-            foreach ($panel["items"] as &$item) {
+        if ($valve <= 0) {
+            IPS_LogMessage("Irrigation", "Zone hat keine Ventil-Instanz");
+            return;
+        }
 
-                // Konfigurationsliste
-                if ($item["type"] === "List" && $item["name"] === "Zones") {
-                    $item["values"] = $zones;
+        // Ventil schalten
+        KNX_WriteDPT1($valve, $State);
+
+        // Pumpe nur einschalten, wenn ein Ventil aktiv ist
+        $this->UpdatePumpState();
+    }
+
+
+    // --------------------------------------------------------
+    // PUMPE AKTUALISIEREN
+    // --------------------------------------------------------
+    private function UpdatePumpState()
+    {
+        $zones = json_decode($this->ReadPropertyString("Zones"), true);
+        $pump = $this->ReadPropertyInteger("PumpInstance");
+
+        if ($pump <= 0) {
+            return;
+        }
+
+        $anyValveOn = false;
+
+        foreach ($zones as $zone) {
+            if (isset($zone["ValveInstance"]) && intval($zone["ValveInstance"]) > 0) {
+
+                $state = GetValue(IPS_GetObjectIDByName("Status", $zone["ValveInstance"]));
+
+                if ($state) {
+                    $anyValveOn = true;
+                    break;
                 }
-
-                // Manuelle Liste
-                if ($item["type"] === "List" && $item["name"] === "ManualZones") {
-
-                    $rows = [];
-                    foreach ($zones as $i => $z) {
-                        $rows[] = [
-                            "Index"    => $i,
-                            "Name"     => $z["Name"],
-                            "Selected" => (bool)$manual[$i]
-                        ];
-                    }
-
-                    $item["values"] = $rows;
-                }
             }
         }
 
-        return json_encode($form);
+        KNX_WriteDPT1($pump, $anyValveOn);
     }
 
-    public function RequestAction($Ident, $Value)
+
+    // --------------------------------------------------------
+    // ALLE VENTILE UND PUMPE AUSSCHALTEN
+    // --------------------------------------------------------
+    public function SwitchAllOff()
     {
-        switch ($Ident) {
+        $zones = json_decode($this->ReadPropertyString("Zones"), true);
+        $pump = $this->ReadPropertyInteger("PumpInstance");
 
-            case "ToggleZone":
-                $this->UpdateManualSelection((int)$Value);
-                break;
-
-            case "OpenSelectedZones":
-                $this->OpenSelectedZones();
-                break;
-
-            case "CloseSelectedZones":
-                $this->CloseSelectedZones();
-                break;
-
-            case "PumpOn":
-                $this->Pump(true);
-                break;
-
-            case "PumpOff":
-                $this->Pump(false);
-                break;
-
-            case "MasterOn":
-                $this->Master(true);
-                break;
-
-            case "MasterOff":
-                $this->Master(false);
-                break;
-        }
-    }
-
-    private function UpdateManualSelection(int $index)
-    {
-        $manual = json_decode($this->GetBuffer("Manual"), true);
-
-        // Toggle der Auswahl
-        $manual[$index] = !$manual[$index];
-
-        $this->SetBuffer("Manual", json_encode($manual));
-    }
-
-    private function Pump(bool $state)
-    {
-        $id = $this->ReadPropertyInteger("PumpID");
-        if ($id > 0) {
-            KNX_WriteDPT1($id, $state);
-        }
-    }
-
-    private function Master(bool $state)
-    {
-        $id = $this->ReadPropertyInteger("MasterSwitchID");
-        if ($id > 0) {
-            SetValueBoolean($id, $state);
-        }
-    }
-
-    private function OpenSelectedZones()
-    {
-        $zones  = json_decode($this->ReadPropertyString("Zones"), true);
-        $manual = json_decode($this->GetBuffer("Manual"), true);
-
-        $travel = $this->ReadPropertyInteger("ValveTravelTime");
-
-        // Pumpe an
-        $this->Pump(true);
-        IPS_Sleep($travel * 1000);
-
-        // Alle ausgewählten Zonen öffnen
-        foreach ($zones as $i => $z) {
-
-            if ($manual[$i] && $z["ValveID"] > 0) {
-                KNX_WriteDPT1($z["ValveID"], true);
-            }
-        }
-    }
-
-    private function CloseSelectedZones()
-    {
-        $zones  = json_decode($this->ReadPropertyString("Zones"), true);
-        $manual = json_decode($this->GetBuffer("Manual"), true);
-
-        // Zonen schließen
-        foreach ($zones as $i => $z) {
-
-            if ($manual[$i] && $z["ValveID"] > 0) {
-                KNX_WriteDPT1($z["ValveID"], false);
+        foreach ($zones as $zone) {
+            if (intval($zone["ValveInstance"]) > 0) {
+                KNX_WriteDPT1(intval($zone["ValveInstance"]), false);
             }
         }
 
-        IPS_Sleep($this->ReadPropertyInteger("ValveTravelTime") * 1000);
-
-        // Pumpe aus
-        $this->Pump(false);
+        if ($pump > 0) {
+            KNX_WriteDPT1($pump, false);
+        }
     }
 }
