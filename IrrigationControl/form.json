@@ -68,6 +68,7 @@
                     "add": false,
                     "delete": false,
                     "sort": false,
+                    "rowSelector": "Index",
                     "columns": [
                         {
                             "caption": "Auswählen",
@@ -87,7 +88,7 @@
                             "visible": false
                         }
                     ],
-                    "onValueChange": "IPS_RequestAction($id, 'ToggleZone', json_encode($row));"
+                    "onValueChange": "IPS_RequestAction($id, 'ToggleZone', $row['Index']);"
                 },
 
                 {
