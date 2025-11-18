@@ -1,0 +1,116 @@
+{
+    "elements": [
+        {
+            "type": "ExpansionPanel",
+            "caption": "Allgemeine Einstellungen",
+            "items": [
+                {
+                    "type": "NumberSpinner",
+                    "name": "MasterSwitchID",
+                    "caption": "Master-Switch ID"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "PumpID",
+                    "caption": "Pumpen KNX ID"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "ValveTravelTime",
+                    "caption": "Ventil Verfahrzeit (Sekunden)",
+                    "minimum": 1,
+                    "maximum": 60
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Zonen Konfiguration",
+            "items": [
+                {
+                    "type": "List",
+                    "name": "Zones",
+                    "caption": "Zonen",
+                    "rowCount": 7,
+                    "columns": [
+                        {
+                            "caption": "Name",
+                            "name": "Name",
+                            "edit": {
+                                "type": "ValidationTextBox"
+                            }
+                        },
+                        {
+                            "caption": "Valve KNX ID",
+                            "name": "ValveID",
+                            "edit": {
+                                "type": "NumberSpinner"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Manuelle Steuerung",
+            "items": [
+                {
+                    "type": "List",
+                    "name": "ManualZones",
+                    "caption": "Zonen",
+                    "rowCount": 7,
+                    "columns": [
+                        {
+                            "caption": "Zone",
+                            "name": "Name"
+                        },
+                        {
+                            "caption": "Auswählen",
+                            "name": "Selected",
+                            "edit": {
+                                "type": "CheckBox"
+                            }
+                        },
+                        {
+                            "caption": "Index",
+                            "name": "Index",
+                            "visible": false
+                        }
+                    ],
+                    "onEdit": "IPS_RequestAction($id, 'ToggleZone', json_encode($row));"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Ausgewählte Zonen öffnen",
+                    "onClick": "IPS_RequestAction($id, 'OpenSelectedZones', true);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Ausgewählte Zonen schließen",
+                    "onClick": "IPS_RequestAction($id, 'CloseSelectedZones', true);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Pumpe EIN",
+                    "onClick": "IPS_RequestAction($id, 'PumpOn', true);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Pumpe AUS",
+                    "onClick": "IPS_RequestAction($id, 'PumpOff', true);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Master EIN",
+                    "onClick": "IPS_RequestAction($id, 'MasterOn', true);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Master AUS",
+                    "onClick": "IPS_RequestAction($id, 'MasterOff', true);"
+                }
+            ]
+        }
+    ]
+}
