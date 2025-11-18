@@ -1,0 +1,12 @@
+{
+  "id": "{3B8208F2-6C01-4E76-B1AF-E0E274C90991}",
+  "name": "IrrigationControl",
+  "type": 3,
+  "vendor": "bucholzki",
+  "aliases": ["Irrigation Control System"],
+  "prefix": "IRR",
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "url": "https://github.com/Tenere-750/IrrigationControl"
+}
