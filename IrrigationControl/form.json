@@ -1,6 +1,5 @@
 {
     "elements": [
-
         {
             "type": "ExpansionPanel",
             "caption": "Allgemeine Einstellungen",
@@ -8,12 +7,14 @@
                 {
                     "type": "SelectObject",
                     "name": "MasterSwitchID",
-                    "caption": "Master-Switch Variable"
+                    "caption": "Master-Switch Variable",
+                    "filter": "Variable"
                 },
                 {
                     "type": "SelectObject",
                     "name": "PumpID",
-                    "caption": "Pumpen KNX Instanz"
+                    "caption": "Pumpen KNX Instanz",
+                    "filter": "Instance"
                 },
                 {
                     "type": "NumberSpinner",
@@ -49,7 +50,7 @@
                             "caption": "Ventil KNX Instanz",
                             "name": "ValveID",
                             "width": "200px",
-                            "edit": { "type": "SelectObject" }
+                            "edit": { "type": "SelectObject", "filter": "Instance" }
                         }
                     ]
                 }
@@ -60,7 +61,6 @@
             "type": "ExpansionPanel",
             "caption": "Manuelle Steuerung",
             "items": [
-
                 {
                     "type": "List",
                     "name": "ManualZones",
@@ -90,7 +90,7 @@
                         }
                     ],
 
-                    "onEdit": "IPS_RequestAction($id, 'ToggleZone', json_encode($row));"
+                    "onValueChange": "IPS_RequestAction($id, 'ToggleZone', json_encode($row));"
                 },
 
                 {
