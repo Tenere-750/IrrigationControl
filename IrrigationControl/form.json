@@ -16,6 +16,7 @@
       "caption": "Master KNX Instanz (optional)",
       "filter": "KNX"
     },
+
     {
       "type": "Label",
       "caption": "Zonen"
@@ -26,13 +27,17 @@
       "caption": "Bewässerungszonen",
       "add": true,
       "delete": true,
+      "sort": false,
+
       "columns": [
         {
           "caption": "Name",
           "name": "Name",
           "width": "200px",
-          "edit": true,
-          "type": "ValidationTextBox"
+          "edit": {
+            "type": "ValidationTextBox"
+          },
+          "add": ""
         },
         {
           "caption": "Ventil KNX Instanz",
@@ -41,33 +46,42 @@
           "edit": {
             "type": "SelectInstance",
             "filter": "KNX"
-          }
+          },
+          "add": 0
         },
         {
           "caption": "Dauer (Minuten)",
           "name": "Duration",
           "width": "120px",
-          "edit": "NumberSpinner"
+          "edit": {
+            "type": "NumberSpinner",
+            "minimum": 1,
+            "maximum": 180
+          },
+          "add": 1
         },
         {
           "caption": "Manuell EIN",
           "name": "ManualOn",
           "width": "120px",
           "type": "Button",
-          "caption": "Einschalten",
-          "onClick": "ManuellZoneSwitch($row['index'], true);"
+          "caption": "EIN",
+          "onClick": "ManuellZoneSwitch($row['index'], true);",
+          "add": false
         },
         {
           "caption": "Manuell AUS",
           "name": "ManualOff",
           "width": "120px",
           "type": "Button",
-          "caption": "Ausschalten",
-          "onClick": "ManuellZoneSwitch($row['index'], false);"
+          "caption": "AUS",
+          "onClick": "ManuellZoneSwitch($row['index'], false);",
+          "add": false
         }
       ]
     }
   ],
+
   "actions": [
     {
       "type": "Button",
