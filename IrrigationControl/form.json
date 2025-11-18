@@ -23,6 +23,7 @@
                 }
             ]
         },
+
         {
             "type": "ExpansionPanel",
             "caption": "Zonen Konfiguration",
@@ -32,6 +33,8 @@
                     "name": "Zones",
                     "caption": "Zonen",
                     "rowCount": 7,
+                    "add": true,
+                    "delete": true,
                     "columns": [
                         {
                             "caption": "Name",
@@ -51,6 +54,7 @@
                 }
             ]
         },
+
         {
             "type": "ExpansionPanel",
             "caption": "Manuelle Steuerung",
@@ -80,6 +84,7 @@
                     ],
                     "onEdit": "IPS_RequestAction($id, 'ToggleZone', json_encode($row));"
                 },
+
                 {
                     "type": "Button",
                     "caption": "Ausgewählte Zonen öffnen",
