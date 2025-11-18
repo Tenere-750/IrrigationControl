@@ -115,7 +115,7 @@ class IrrigationControl extends IPSModule
     {
         $id = $this->ReadPropertyInteger("PumpID");
         if ($id > 0) {
-            EIB_Switch($id, $state);
+            KNX_WriteDPT1($id, $state);
         }
     }
 
@@ -141,7 +141,7 @@ class IrrigationControl extends IPSModule
         // Zonen öffnen
         foreach ($zones as $i => $z) {
             if ($manual[$i] && $z["ValveID"] > 0) {
-                EIB_Switch($z["ValveID"], true);
+                KNX_WriteDPT1($z["ValveID"], true);
             }
         }
     }
@@ -154,7 +154,7 @@ class IrrigationControl extends IPSModule
         // Zonen schließen
         foreach ($zones as $i => $z) {
             if ($manual[$i] && $z["ValveID"] > 0) {
-                EIB_Switch($z["ValveID"], false);
+                KNX_WriteDPT1($z["ValveID"], false);
             }
         }
 
