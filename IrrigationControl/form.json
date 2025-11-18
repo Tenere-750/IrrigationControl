@@ -7,28 +7,28 @@
                 {
                     "type": "SelectObject",
                     "name": "MasterSwitchID",
-                    "caption": "Master-Switch Variable",
+                    "caption": "Master Schalter (Boolean)",
                     "filter": "Variable"
                 },
                 {
                     "type": "SelectObject",
                     "name": "PumpID",
-                    "caption": "Pumpen KNX Instanz",
+                    "caption": "Pumpe (KNX Schaltobjekt)",
                     "filter": "Instance"
                 },
                 {
                     "type": "NumberSpinner",
                     "name": "ValveTravelTime",
-                    "caption": "Ventil Fahrzeit (Sekunden)",
-                    "minimum": 1,
-                    "maximum": 60
+                    "caption": "Ventil-Verfahrzeit (Sekunden)",
+                    "minimum": 0,
+                    "maximum": 30
                 }
             ]
         },
 
         {
             "type": "ExpansionPanel",
-            "caption": "Zonen Konfiguration",
+            "caption": "Zonen-Konfiguration",
             "items": [
                 {
                     "type": "List",
@@ -37,20 +37,21 @@
                     "rowCount": 7,
                     "add": false,
                     "delete": false,
-                    "sort": false,
-
                     "columns": [
                         {
-                            "caption": "Zonenname",
+                            "caption": "Name",
                             "name": "Name",
                             "width": "200px",
-                            "edit": { "type": "ValidationTextBox" }
+                            "edit": true
                         },
                         {
-                            "caption": "Ventil KNX Instanz",
+                            "caption": "KNX Valve ID",
                             "name": "ValveID",
-                            "width": "200px",
-                            "edit": { "type": "SelectObject", "filter": "Instance" }
+                            "width": "auto",
+                            "edit": {
+                                "type": "SelectObject",
+                                "filter": "Instance"
+                            }
                         }
                     ]
                 }
@@ -64,66 +65,48 @@
                 {
                     "type": "List",
                     "name": "ManualZones",
-                    "caption": "Zonen",
+                    "caption": "Zonen auswählen",
                     "rowCount": 7,
-                    "add": false,
-                    "delete": false,
-                    "sort": false,
-
                     "columns": [
+                        {
+                            "caption": "",
+                            "name": "Selected",
+                            "width": "40px",
+                            "edit": "boolean"
+                        },
                         {
                             "caption": "Zone",
                             "name": "Name",
-                            "width": "200px",
-                            "edit": false
-                        },
-                        {
-                            "caption": "Auswählen",
-                            "name": "Selected",
-                            "width": "80px",
-                            "edit": { "type": "CheckBox" }
-                        },
-                        {
-                            "caption": "Index",
-                            "name": "Index",
-                            "visible": false
+                            "width": "200px"
                         }
                     ],
-
-                    "onValueChange": "IPS_RequestAction($id, 'ToggleZone', json_encode($row));"
+                    "onValueChange": "IPS_RequestAction($id, 'ToggleZone', json_encode(['Index' => $row['Index'], 'Selected' => $row['Selected']]));"
                 },
 
                 {
                     "type": "Button",
                     "caption": "Ausgewählte Zonen öffnen",
-                    "onClick": "IPS_RequestAction($id, 'OpenSelectedZones', true);"
+                    "onClick": "IPS_RequestAction($id, 'OpenSelectedZones', 1);"
                 },
                 {
                     "type": "Button",
                     "caption": "Ausgewählte Zonen schließen",
-                    "onClick": "IPS_RequestAction($id, 'CloseSelectedZones', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Pumpe EIN",
-                    "onClick": "IPS_RequestAction($id, 'PumpOn', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Pumpe AUS",
-                    "onClick": "IPS_RequestAction($id, 'PumpOff', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Master EIN",
-                    "onClick": "IPS_RequestAction($id, 'MasterOn', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Master AUS",
-                    "onClick": "IPS_RequestAction($id, 'MasterOff', true);"
+                    "onClick": "IPS_RequestAction($id, 'CloseSelectedZones', 1);"
                 }
             ]
+        }
+    ],
+
+    "status": [
+        {
+            "code": 102,
+            "icon": "active",
+            "caption": "Modul ist aktiv"
+        },
+        {
+            "code": 200,
+            "icon": "error",
+            "caption": "Fehlerhafte Einstellungen"
         }
     ]
 }
