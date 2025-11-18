@@ -8,14 +8,12 @@
       "name": "PumpInstance",
       "type": "SelectInstance",
       "caption": "Pumpen KNX Instanz",
-      "multiple": false,
       "filter": "KNX"
     },
     {
       "name": "MasterSwitch",
       "type": "SelectInstance",
       "caption": "Master KNX Instanz (optional)",
-      "multiple": false,
       "filter": "KNX"
     },
     {
@@ -40,7 +38,10 @@
           "caption": "Ventil KNX Instanz",
           "name": "ValveInstance",
           "width": "250px",
-          "edit": { "type": "SelectInstance", "filter": "KNX" }
+          "edit": {
+            "type": "SelectInstance",
+            "filter": "KNX"
+          }
         },
         {
           "caption": "Dauer (Minuten)",
@@ -54,7 +55,7 @@
           "width": "120px",
           "type": "Button",
           "caption": "Einschalten",
-          "onClick": "ManuellZoneSwitch($id, true);"
+          "onClick": "ManuellZoneSwitch($row['index'], true);"
         },
         {
           "caption": "Manuell AUS",
@@ -62,17 +63,12 @@
           "width": "120px",
           "type": "Button",
           "caption": "Ausschalten",
-          "onClick": "ManuellZoneSwitch($id, false);"
+          "onClick": "ManuellZoneSwitch($row['index'], false);"
         }
       ]
     }
   ],
-
   "actions": [
-    {
-      "type": "Label",
-      "caption": "Aktionen"
-    },
     {
       "type": "Button",
       "caption": "Alle Zonen AUS",
