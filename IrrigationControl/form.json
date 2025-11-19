@@ -5,23 +5,16 @@
             "caption": "Allgemeine Einstellungen",
             "items": [
                 {
-                    "type": "SelectInstance",
+                    "type": "SelectObject",
                     "name": "MasterID",
-                    "caption": "Master KNX Instanz",
-                    "moduleID": "{1B7C52A7-51D5-4F94-9E6E-1B6BDAD929F3}"
-                },
-                {
-                    "type": "SelectInstance",
-                    "name": "PumpID",
-                    "caption": "Pumpen KNX Instanz",
-                    "moduleID": "{1B7C52A7-51D5-4F94-9E6E-1B6BDAD929F3}"
+                    "caption": "Master KNX Instanz"
                 },
                 {
                     "type": "NumberSpinner",
                     "name": "GlobalTravelTime",
-                    "caption": "Standard-Verfahrzeit (ms)",
-                    "minimum": 100,
-                    "maximum": 60000
+                    "caption": "Ventil Verfahrzeit (Sekunden)",
+                    "minimum": 1,
+                    "maximum": 60
                 }
             ]
         },
@@ -37,40 +30,51 @@
                     "rowCount": 10,
                     "add": true,
                     "delete": true,
+                    "sort": {
+                        "column": "Name",
+                        "direction": "ascending"
+                    },
+
                     "columns": [
                         {
                             "caption": "Name",
                             "name": "Name",
                             "width": "200px",
-                            "add": "Neue Zone",
-                            "edit": {
-                                "type": "ValidationTextBox"
-                            }
+                            "edit": { "type": "ValidationTextBox" },
+                            "add": "Neue Zone"
                         },
                         {
                             "caption": "Ventil KNX Instanz",
                             "name": "Ventil",
-                            "width": "220px",
-                            "add": 0,
-                            "edit": {
-                                "type": "SelectInstance",
-                                "moduleID": "{1B7C52A7-51D5-4F94-9E6E-1B6BDAD929F3}"
-                            }
+                            "width": "200px",
+                            "edit": { "type": "SelectObject" },
+                            "add": 0
                         },
                         {
-                            "caption": "Verfahrzeit (ms)",
+                            "caption": "Pumpe KNX Instanz",
+                            "name": "Pumpe",
+                            "width": "200px",
+                            "edit": { "type": "SelectObject" },
+                            "add": 0
+                        },
+                        {
+                            "caption": "Verfahrzeit (Sekunden)",
                             "name": "Verfahrzeit",
                             "width": "150px",
-                            "add": 1000,
-                            "edit": {
-                                "type": "NumberSpinner",
-                                "minimum": 100,
-                                "maximum": 60000
-                            }
+                            "edit": { "type": "NumberSpinner" },
+                            "add": 5
                         }
                     ]
                 }
             ]
+        }
+    ],
+
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Konfiguration neu laden",
+            "onClick": "echo \"Konfiguration aktualisiert.\";"
         }
     ]
 }
