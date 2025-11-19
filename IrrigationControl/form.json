@@ -1,99 +1,45 @@
 {
     "elements": [
-
         {
             "type": "ExpansionPanel",
-            "caption": "Allgemeine Einstellungen",
+            "caption": "Master",
             "items": [
                 {
-                    "type": "SelectObject",
+                    "type": "CheckBox",
                     "name": "MasterSwitch",
-                    "caption": "Master-Switch Variable"
-                },
-                {
-                    "type": "SelectObject",
-                    "name": "PumpInstance",
-                    "caption": "Pumpen KNX Instanz"
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "ValveTime",
-                    "caption": "Ventil Fahrzeit (Sekunden)",
-                    "minimum": 1,
-                    "maximum": 60
+                    "caption": "Master EIN/AUS"
                 }
             ]
         },
-
         {
             "type": "ExpansionPanel",
-            "caption": "Zonen Konfiguration",
+            "caption": "Zonen",
             "items": [
                 {
                     "type": "List",
-                    "name": "Zones",
+                    "name": "ZoneList",
                     "caption": "Zonen",
-                    "rowCount": 8,
+                    "columns": [
+                        { "caption": "Name", "name": "Name", "width": "200px", "add": "" },
+                        { "caption": "Ventil-Adresse", "name": "Ventil", "width": "150px", "add": 0 },
+                        { "caption": "Pumpe-Adresse", "name": "Pumpe", "width": "150px", "add": 0 },
+                        { "caption": "Verfahrzeit (ms)", "name": "Verfahrzeit", "width": "150px", "add": 1000 }
+                    ],
                     "add": true,
                     "delete": true,
-                    "sort": true,
-                    "columns": [
-                        {
-                            "caption": "Zonenname",
-                            "name": "Name",
-                            "width": "200px",
-                            "edit": { "type": "ValidationTextBox" },
-                            "add": ""
-                        },
-                        {
-                            "caption": "KNX Ventil Instanz",
-                            "name": "ValveInstance",
-                            "width": "200px",
-                            "edit": { "type": "SelectObject" },
-                            "add": 0
-                        }
-                    ]
+                    "sort": {
+                        "column": "Name",
+                        "direction": "ascending"
+                    }
                 }
             ]
-        },
-
+        }
+    ],
+    "actions": [
         {
-            "type": "ExpansionPanel",
-            "caption": "Manuelle Steuerung",
-            "items": [
-
-                {
-                    "type": "List",
-                    "name": "ManualZoneList",
-                    "caption": "Zonen",
-                    "rowCount": 8,
-                    "add": false,
-                    "delete": false,
-                    "sort": false,
-                    "columns": [
-                        { "caption": "Zone",  "name": "Name",  "width": "200px" },
-                        { "caption": "EIN",   "name": "BtnOn",  "width": "100px", "edit": { "type": "Button" } },
-                        { "caption": "AUS",   "name": "BtnOff", "width": "100px", "edit": { "type": "Button" } }
-                    ],
-                    "onClick": "IPS_RequestAction($id, \"ManualZoneClick\", json_encode($row));"
-                },
-
-                {
-                    "type": "Button",
-                    "caption": "Alle Zonen ausschalten",
-                    "onClick": "IPS_RequestAction($id, 'AllZonesOff', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Pumpe EIN",
-                    "onClick": "IPS_RequestAction($id, 'PumpOn', true);"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Pumpe AUS",
-                    "onClick": "IPS_RequestAction($id, 'PumpOff', true);"
-                }
-            ]
+            "type": "Button",
+            "caption": "Aktualisieren",
+            "onClick": "UpdateForm()"
         }
     ]
 }
