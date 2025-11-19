@@ -10,11 +10,17 @@
                     "caption": "Master KNX Instanz"
                 },
                 {
+                    "type": "SelectObject",
+                    "name": "PumpID",
+                    "caption": "Pumpen KNX Instanz"
+                },
+                {
                     "type": "NumberSpinner",
                     "name": "GlobalTravelTime",
                     "caption": "Ventil Verfahrzeit (Sekunden)",
                     "minimum": 1,
-                    "maximum": 60
+                    "maximum": 60,
+                    "value": 7
                 }
             ]
         },
@@ -34,7 +40,6 @@
                         "column": "Name",
                         "direction": "ascending"
                     },
-
                     "columns": [
                         {
                             "caption": "Name",
@@ -51,18 +56,11 @@
                             "add": 0
                         },
                         {
-                            "caption": "Pumpe KNX Instanz",
-                            "name": "Pumpe",
-                            "width": "200px",
-                            "edit": { "type": "SelectObject" },
-                            "add": 0
-                        },
-                        {
                             "caption": "Verfahrzeit (Sekunden)",
                             "name": "Verfahrzeit",
                             "width": "150px",
                             "edit": { "type": "NumberSpinner" },
-                            "add": 5
+                            "add": 7
                         }
                     ]
                 }
