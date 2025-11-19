@@ -24,7 +24,6 @@ class IrrigationControl extends IPSModule
     public function ApplyChanges()
     {
         parent::ApplyChanges();
-
         $this->ValidateConfig();
     }
 
@@ -122,33 +121,22 @@ class IrrigationControl extends IPSModule
         $active = intval($this->GetBuffer("ActiveZones"));
 
         if ($state) {
-            // =======================
-            // ZONE EIN
-            // =======================
             KNX_WriteDPT1($ventil, true);
 
-            // aktive Zonen erhöhen
             $active++;
             $this->SetBuffer("ActiveZones", strval($active));
 
-            // nur wenn vorher 0 Zonen aktiv waren → Pumpe verzögert einschalten
             if ($active === 1) {
                 $this->SetBuffer("PumpOnPending", "1");
                 $this->SetTimerInterval("PumpOnDelay", $travelMs);
             }
         } else {
-            // =======================
-            // ZONE AUS
-            // =======================
             KNX_WriteDPT1($ventil, false);
 
             $active--;
-            if ($active < 0) {
-                $active = 0;
-            }
+            if ($active < 0) $active = 0;
             $this->SetBuffer("ActiveZones", strval($active));
 
-            // wenn jetzt *keine einzige Zone mehr aktiv ist* → Pumpe aus
             if ($active === 0) {
                 KNX_WriteDPT1($pump, false);
             }
@@ -170,8 +158,95 @@ class IrrigationControl extends IPSModule
             }
         }
 
-        // Timer deaktivieren
         $this->SetTimerInterval("PumpOnDelay", 0);
         $this->SetBuffer("PumpOnPending", "0");
     }
+
+
+
+    // ========================================================================
+    // ========================================================================
+    //  🔽🔽🔽  HIER beginnen die NEUEN IRR_* FUNKTIONEN (nur Ergänzung) 🔽🔽🔽
+    // ========================================================================
+    // ========================================================================
+
+
+    // IRR_SwitchZone — öffentliche API
+    public function IRR_SwitchZone(int $zoneIndex, bool $state)
+    {
+        $this->SwitchZone($zoneIndex, $state);
+    }
+
+    // IRR_Pump — öffentliche API
+    public function IRR_Pump(bool $state)
+    {
+        $this->ManualPump($state);
+    }
+
+    // IRR_Master — Master EIN/AUS inklusive Abschaltlogik
+    public function IRR_Master(bool $state)
+    {
+        // Master setzen
+        $this->SwitchMaster($state);
+
+        if ($state === true) {
+            // Wenn Master aktiviert → alles ausschalten
+            $this->IRR_AllOff();
+        }
+    }
+
+    // IRR_AllOff — Pumpe aus + Ventile schließen
+    public function IRR_AllOff()
+    {
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true);
+        $pump = $this->ReadPropertyInteger("PumpID");
+
+        foreach ($zones as $z) {
+            if (isset($z["Ventil"]) && $z["Ventil"] > 0) {
+                KNX_WriteDPT1($z["Ventil"], false);
+            }
+        }
+
+        if ($pump > 0) {
+            KNX_WriteDPT1($pump, false);
+        }
+
+        $this->SetBuffer("ActiveZones", "0");
+    }
+
+    // IRR_GetZones — Statusabfrage
+    public function IRR_GetZones()
+    {
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true);
+        $pump = $this->ReadPropertyInteger("PumpID");
+
+        $result = [];
+
+        foreach ($zones as $i => $z) {
+            $ventil = intval($z["Ventil"]);
+            $status = null;
+
+            if ($ventil > 0 && IPS_VariableExists($ventil)) {
+                $status = GetValue($ventil);
+            }
+
+            $result[] = [
+                "index" => $i,
+                "name"  => $z["Name"] ?? ("Zone " . $i),
+                "ventil" => $ventil,
+                "isOn" => $status
+            ];
+        }
+
+        $pumpStatus = null;
+        if ($pump > 0 && IPS_VariableExists($pump)) {
+            $pumpStatus = GetValue($pump);
+        }
+
+        return [
+            "zones" => $result,
+            "pump"  => $pumpStatus
+        ];
+    }
+
 }
