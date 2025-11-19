@@ -1,101 +1,105 @@
 {
-    "elements": [
-
+  "elements": [
+    {
+      "name": "General",
+      "type": "ExpansionPanel",
+      "caption": "Allgemeine Einstellungen",
+      "items": [
         {
-            "type": "ExpansionPanel",
-            "caption": "Allgemeine Einstellungen",
-            "items": [
-                {
-                    "type": "SelectObject",
-                    "name": "MasterSwitch",
-                    "caption": "Master-Switch Variable"
-                },
-                {
-                    "type": "SelectObject",
-                    "name": "PumpInstance",
-                    "caption": "Pumpen KNX Instanz"
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "ValveTravelTime",
-                    "caption": "Ventil Fahrzeit (Sekunden)",
-                    "minimum": 1,
-                    "maximum": 60
-                }
-            ]
+          "type": "SelectInstance",
+          "name": "PumpInstance",
+          "caption": "Pumpen KNX Instanz"
         },
-
         {
-            "type": "ExpansionPanel",
-            "caption": "Zonen Konfiguration",
-            "items": [
-                {
-                    "type": "List",
-                    "name": "Zones",
-                    "caption": "Zonen",
-                    "rowCount": 7,
-                    "add": true,
-                    "delete": true,
-                    "sort": false,
-                    "columns": [
-                        {
-                            "caption": "Zonenname",
-                            "name": "Name",
-                            "width": "200px",
-                            "edit": { "type": "ValidationTextBox" }
-                        },
-                        {
-                            "caption": "KNX Ventil Instanz",
-                            "name": "ValveInstance",
-                            "width": "200px",
-                            "edit": { "type": "SelectObject" }
-                        }
-                    ]
-                }
-            ]
+          "type": "SelectInstance",
+          "name": "MasterSwitch",
+          "caption": "Master Switch"
         },
-
         {
-            "type": "ExpansionPanel",
-            "caption": "Manuelle Steuerung",
-            "items": [
-
-                {
-                    "type": "List",
-                    "name": "ManualZones",
-                    "caption": "Zonen",
-                    "rowCount": 7,
-                    "add": false,
-                    "delete": false,
-                    "sort": false,
-                    "columns": [
-                        {
-                            "caption": "Auswählen",
-                            "name": "Selected",
-                            "width": "80px",
-                            "edit": { "type": "CheckBox" }
-                        },
-                        {
-                            "caption": "Zone",
-                            "name": "Name",
-                            "width": "200px",
-                            "edit": false
-                        },
-                        {
-                            "caption": "Index",
-                            "name": "Index",
-                            "visible": false
-                        }
-                    ],
-                    "onValueChange": "IPS_RequestAction($id, 'ManuellZoneSwitch', json_encode(['Index' => $row['Index'], 'State' => $row['Selected']]));"
-                },
-
-                {
-                    "type": "Button",
-                    "caption": "Alle Zonen ausschalten",
-                    "onClick": "IPS_RequestAction($id, 'SwitchAllOff', true);"
-                }
-            ]
+          "type": "NumberSpinner",
+          "name": "ValveTime",
+          "caption": "Ventilverfahrzeit (Sek.)",
+          "minimum": 1,
+          "maximum": 30
         }
-    ]
+      ]
+    },
+    {
+      "name": "Zones",
+      "type": "ExpansionPanel",
+      "caption": "Zonen-Konfiguration",
+      "items": [
+        {
+          "type": "List",
+          "name": "Zones",
+          "add": true,
+          "delete": true,
+          "caption": "Beregnungszonen",
+          "columns": [
+            {
+              "caption": "Name",
+              "name": "Name",
+              "width": "200px",
+              "type": "ValidationTextBox"
+            },
+            {
+              "caption": "KNX Instanz",
+              "name": "ValveInstance",
+              "width": "200px",
+              "type": "SelectInstance"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "Manuelle Steuerung",
+      "items": [
+        {
+          "type": "Button",
+          "caption": "Pumpe EIN",
+          "onClick": "PumpOn();"
+        },
+        {
+          "type": "Button",
+          "caption": "Pumpe AUS",
+          "onClick": "PumpOff();"
+        },
+        {
+          "type": "Button",
+          "caption": "Alle Zonen ausschalten",
+          "onClick": "AllZonesOff();"
+        },
+        {
+          "type": "List",
+          "name": "ZoneControl",
+          "caption": "Zonen manuell schalten",
+          "rowCount": 10,
+          "columns": [
+            {
+              "caption": "Zone",
+              "name": "Name",
+              "width": "200px"
+            },
+            {
+              "caption": "AN",
+              "name": "ButtonOn",
+              "width": "100px",
+              "type": "Button",
+              "onClick": "ManualZoneOn($row['Index']);"
+            },
+            {
+              "caption": "AUS",
+              "name": "ButtonOff",
+              "width": "100px",
+              "type": "Button",
+              "onClick": "ManualZoneOff($row['Index']);"
+            }
+          ],
+          "values": "GetZoneControlList()"
+        }
+      ]
+    }
+  ]
 }
