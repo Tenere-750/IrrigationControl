@@ -53,9 +53,9 @@ class IrrigationControl extends IPSModule
         }
     }
 
-    // ---------------------------------------------------------
-    //  ----------- RequestAction für WebFront Schalter --------
-    // ---------------------------------------------------------
+    // ----------------------------------------------------------
+    //  ----------- RequestAction für WebFront Schalter ---------
+    // ----------------------------------------------------------
     public function RequestAction($Ident, $Value)
     {
         if (str_starts_with($Ident, "Zone")) {
