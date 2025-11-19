@@ -11,7 +11,7 @@ class IrrigationControl extends IPSModule
         // Properties aus form.json
         $this->RegisterPropertyInteger("MasterID", 0);
         $this->RegisterPropertyInteger("PumpID", 0);
-        $this->RegisterPropertyInteger("GlobalTravelTime", 1000);
+        $this->RegisterPropertyInteger("GlobalTravelTime", 1); // Sekunden
         $this->RegisterPropertyString("ZoneList", "[]");
 
         // Timer für verzögertes Pumpeneinschalten
@@ -107,7 +107,11 @@ class IrrigationControl extends IPSModule
 
         $zone = $zones[$zoneIndex];
         $ventil = intval($zone["Ventil"]);
-        $travel = intval($zone["Verfahrzeit"] ?? $this->ReadPropertyInteger("GlobalTravelTime"));
+
+        // Verfahrzeit jetzt in Sekunden — Umwandlung in ms für Timer
+        $travelSeconds = intval($zone["Verfahrzeit"] ?? $this->ReadPropertyInteger("GlobalTravelTime"));
+        $travelMs = $travelSeconds * 1000;
+
         $pump = $this->ReadPropertyInteger("PumpID");
 
         if ($ventil <= 0 || $pump <= 0) {
@@ -130,7 +134,7 @@ class IrrigationControl extends IPSModule
             // nur wenn vorher 0 Zonen aktiv waren → Pumpe verzögert einschalten
             if ($active === 1) {
                 $this->SetBuffer("PumpOnPending", "1");
-                $this->SetTimerInterval("PumpOnDelay", $travel);
+                $this->SetTimerInterval("PumpOnDelay", $travelMs);
             }
         } else {
             // =======================
@@ -158,6 +162,7 @@ class IrrigationControl extends IPSModule
     public function PumpOnTimer()
     {
         $pending = intval($this->GetBuffer("PumpOnPending"));
+
         if ($pending === 1) {
             $pump = $this->ReadPropertyInteger("PumpID");
             if ($pump > 0) {
