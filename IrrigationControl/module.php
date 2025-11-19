@@ -8,16 +8,13 @@ class IrrigationControl extends IPSModule
     {
         parent::Create();
 
-        // Properties aus form.json
         $this->RegisterPropertyInteger("MasterID", 0);
         $this->RegisterPropertyInteger("PumpID", 0);
-        $this->RegisterPropertyInteger("GlobalTravelTime", 1); // Sekunden
+        $this->RegisterPropertyInteger("GlobalTravelTime", 1);
         $this->RegisterPropertyString("ZoneList", "[]");
 
-        // Timer für verzögertes Pumpeneinschalten
         $this->RegisterTimer("PumpOnDelay", 0, "IRR_PumpOnTimer(\$_IPS['TARGET']);");
 
-        // Interner Status: wie viele Zonen sind aktiv?
         $this->SetBuffer("ActiveZones", "0");
     }
 
@@ -53,9 +50,9 @@ class IrrigationControl extends IPSModule
         }
     }
 
-    // ----------------------------------------------------------
-    //  ----------- RequestAction für WebFront Schalter ---------
-    // ----------------------------------------------------------
+    // ----------------------------
+    // RequestAction
+    // ----------------------------
     public function RequestAction($Ident, $Value)
     {
         if (str_starts_with($Ident, "Zone")) {
@@ -70,12 +67,12 @@ class IrrigationControl extends IPSModule
         }
 
         if ($Ident === "Master") {
-            $this->SwitchMaster($Value);
+            $this->Master($Value);
             return;
         }
     }
 
-    private function SwitchMaster(bool $state)
+    private function Master(bool $state)
     {
         $id = $this->ReadPropertyInteger("MasterID");
         if ($id > 0) {
@@ -92,9 +89,9 @@ class IrrigationControl extends IPSModule
     }
 
 
-    // ---------------------------------------------------------
-    //     -----------   Zonensteuerung   ----------------------
-    // ---------------------------------------------------------
+    // ----------------------------
+    // Zone EIN/AUS
+    // ----------------------------
     public function SwitchZone(int $zoneIndex, bool $state)
     {
         $zones = json_decode($this->ReadPropertyString("ZoneList"), true);
@@ -107,22 +104,24 @@ class IrrigationControl extends IPSModule
         $zone = $zones[$zoneIndex];
         $ventil = intval($zone["Ventil"]);
 
-        // Verfahrzeit jetzt in Sekunden — Umwandlung in ms für Timer
         $travelSeconds = intval($zone["Verfahrzeit"] ?? $this->ReadPropertyInteger("GlobalTravelTime"));
         $travelMs = $travelSeconds * 1000;
 
         $pump = $this->ReadPropertyInteger("PumpID");
 
         if ($ventil <= 0 || $pump <= 0) {
-            IPS_LogMessage("IRR", "Zone hat keine gültige Ventil- oder Pumpeninstanz");
+            IPS_LogMessage("IRR", "Zone hat keine gültige Ventil-/Pumpeninstanz");
             return;
         }
 
         $active = intval($this->GetBuffer("ActiveZones"));
 
         if ($state) {
+
+            // Ventil öffnen
             KNX_WriteDPT1($ventil, true);
 
+            // aktive Zonen erhöhen
             $active++;
             $this->SetBuffer("ActiveZones", strval($active));
 
@@ -130,11 +129,16 @@ class IrrigationControl extends IPSModule
                 $this->SetBuffer("PumpOnPending", "1");
                 $this->SetTimerInterval("PumpOnDelay", $travelMs);
             }
+
         } else {
+
+            // Ventil schließen
             KNX_WriteDPT1($ventil, false);
 
             $active--;
-            if ($active < 0) $active = 0;
+            if ($active < 0) {
+                $active = 0;
+            }
             $this->SetBuffer("ActiveZones", strval($active));
 
             if ($active === 0) {
@@ -143,10 +147,9 @@ class IrrigationControl extends IPSModule
         }
     }
 
-
-    // ---------------------------------------------------------
-    //     -----------   Timer: Pumpe EIN   --------------------
-    // ---------------------------------------------------------
+    // ----------------------------
+    // Timer: Pumpe EIN
+    // ----------------------------
     public function PumpOnTimer()
     {
         $pending = intval($this->GetBuffer("PumpOnPending"));
@@ -163,90 +166,51 @@ class IrrigationControl extends IPSModule
     }
 
 
+    // ---------------------------------------------------------
+    // Weitere steuerbare Funktionen
+    // ---------------------------------------------------------
 
-    // ========================================================================
-    // ========================================================================
-    //  🔽🔽🔽  HIER beginnen die NEUEN IRR_* FUNKTIONEN (nur Ergänzung) 🔽🔽🔽
-    // ========================================================================
-    // ========================================================================
-
-
-    // IRR_SwitchZone — öffentliche API
-    public function IRR_SwitchZone(int $zoneIndex, bool $state)
+    public function Pump(bool $state)
     {
-        $this->SwitchZone($zoneIndex, $state);
-    }
-
-    // IRR_Pump — öffentliche API
-    public function IRR_Pump(bool $state)
-    {
-        $this->ManualPump($state);
-    }
-
-    // IRR_Master — Master EIN/AUS inklusive Abschaltlogik
-    public function IRR_Master(bool $state)
-    {
-        // Master setzen
-        $this->SwitchMaster($state);
-
-        if ($state === true) {
-            // Wenn Master aktiviert → alles ausschalten
-            $this->IRR_AllOff();
+        $pump = $this->ReadPropertyInteger("PumpID");
+        if ($pump > 0) {
+            KNX_WriteDPT1($pump, $state);
         }
     }
 
-    // IRR_AllOff — Pumpe aus + Ventile schließen
-    public function IRR_AllOff()
+    public function AllOff()
     {
         $zones = json_decode($this->ReadPropertyString("ZoneList"), true);
         $pump = $this->ReadPropertyInteger("PumpID");
 
+        KNX_WriteDPT1($pump, false);
+
         foreach ($zones as $z) {
-            if (isset($z["Ventil"]) && $z["Ventil"] > 0) {
+            if ($z["Ventil"] > 0) {
                 KNX_WriteDPT1($z["Ventil"], false);
             }
-        }
-
-        if ($pump > 0) {
-            KNX_WriteDPT1($pump, false);
         }
 
         $this->SetBuffer("ActiveZones", "0");
     }
 
-    // IRR_GetZones — Statusabfrage
-    public function IRR_GetZones()
+    public function GetZones()
     {
         $zones = json_decode($this->ReadPropertyString("ZoneList"), true);
         $pump = $this->ReadPropertyInteger("PumpID");
 
-        $result = [];
-
+        $status = [];
         foreach ($zones as $i => $z) {
-            $ventil = intval($z["Ventil"]);
-            $status = null;
-
-            if ($ventil > 0 && IPS_VariableExists($ventil)) {
-                $status = GetValue($ventil);
-            }
-
-            $result[] = [
+            $status[] = [
                 "index" => $i,
-                "name"  => $z["Name"] ?? ("Zone " . $i),
-                "ventil" => $ventil,
-                "isOn" => $status
+                "name"  => $z["Name"],
+                "active" => ($z["Ventil"] > 0) ? GetValue($z["Ventil"]) : false
             ];
         }
 
-        $pumpStatus = null;
-        if ($pump > 0 && IPS_VariableExists($pump)) {
-            $pumpStatus = GetValue($pump);
-        }
-
         return [
-            "zones" => $result,
-            "pump"  => $pumpStatus
+            "pump" => ($pump > 0) ? GetValue($pump) : false,
+            "zones" => $status
         ];
     }
-
 }
