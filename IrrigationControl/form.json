@@ -2,15 +2,30 @@
     "elements": [
         {
             "type": "ExpansionPanel",
-            "caption": "Master",
+            "caption": "Allgemeine Einstellungen",
             "items": [
                 {
-                    "type": "CheckBox",
-                    "name": "MasterSwitch",
-                    "caption": "Master EIN/AUS"
+                    "type": "SelectInstance",
+                    "name": "MasterID",
+                    "caption": "Master KNX Instanz",
+                    "moduleID": "{1B7C52A7-51D5-4F94-9E6E-1B6BDAD929F3}"
+                },
+                {
+                    "type": "SelectInstance",
+                    "name": "PumpID",
+                    "caption": "Pumpen KNX Instanz",
+                    "moduleID": "{1B7C52A7-51D5-4F94-9E6E-1B6BDAD929F3}"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "GlobalTravelTime",
+                    "caption": "Standard-Verfahrzeit (ms)",
+                    "minimum": 100,
+                    "maximum": 60000
                 }
             ]
         },
+
         {
             "type": "ExpansionPanel",
             "caption": "Zonen",
@@ -19,27 +34,43 @@
                     "type": "List",
                     "name": "ZoneList",
                     "caption": "Zonen",
-                    "columns": [
-                        { "caption": "Name", "name": "Name", "width": "200px", "add": "Neue Zone" },
-                        { "caption": "Ventil-Adresse", "name": "Ventil", "width": "150px", "add": 0 },
-                        { "caption": "Pumpe-Adresse", "name": "Pumpe", "width": "150px", "add": 0 },
-                        { "caption": "Verfahrzeit (ms)", "name": "Verfahrzeit", "width": "150px", "add": 1000 }
-                    ],
+                    "rowCount": 10,
                     "add": true,
                     "delete": true,
-                    "sort": {
-                        "column": "Name",
-                        "direction": "ascending"
-                    }
+                    "columns": [
+                        {
+                            "caption": "Name",
+                            "name": "Name",
+                            "width": "200px",
+                            "add": "Neue Zone",
+                            "edit": {
+                                "type": "ValidationTextBox"
+                            }
+                        },
+                        {
+                            "caption": "Ventil KNX Instanz",
+                            "name": "Ventil",
+                            "width": "220px",
+                            "add": 0,
+                            "edit": {
+                                "type": "SelectInstance",
+                                "moduleID": "{1B7C52A7-51D5-4F94-9E6E-1B6BDAD929F3}"
+                            }
+                        },
+                        {
+                            "caption": "Verfahrzeit (ms)",
+                            "name": "Verfahrzeit",
+                            "width": "150px",
+                            "add": 1000,
+                            "edit": {
+                                "type": "NumberSpinner",
+                                "minimum": 100,
+                                "maximum": 60000
+                            }
+                        }
+                    ]
                 }
             ]
-        }
-    ],
-    "actions": [
-        {
-            "type": "Button",
-            "caption": "Aktualisieren",
-            "onClick": "IRR_UpdateForm($id)"
         }
     ]
 }
