@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 class IrrigationControl extends IPSModule
 {
+    // Maximale Anzahl unterstützter Zonen
+    private const MAX_ZONES = 10;
+
     public function Create()
     {
         parent::Create();
@@ -19,11 +22,8 @@ class IrrigationControl extends IPSModule
         // Buffer für aktive Zonen
         $this->SetBuffer("ActiveZones", "0");
 
-        // Timer pro Zone dynamisch erzeugen
-        $zones = json_decode($this->ReadPropertyString("ZoneList"), true);
-        if (!is_array($zones)) $zones = [];
-
-        foreach ($zones as $i => $zone) {
+        // Maximal mögliche Zonen-Timer vordefiniert registrieren
+        for ($i = 0; $i < self::MAX_ZONES; $i++) {
             $this->RegisterTimer("ZoneDelayTimer_" . $i, 0, "IRR_ZoneDelayTimer(\$_IPS['TARGET'], $i);");
         }
     }
@@ -33,13 +33,17 @@ class IrrigationControl extends IPSModule
         parent::ApplyChanges();
         $this->RegisterWebFrontVariables();
 
-        // Timer pro Zone (falls neue Zonen dazu kamen)
+        // Timer-Intervalle für alle Zonen setzen (voreingestellt aus)
         $zones = json_decode($this->ReadPropertyString("ZoneList"), true);
         if (!is_array($zones)) $zones = [];
 
-        foreach ($zones as $i => $zone) {
-            if (!IPS_TimerExists($this->GetIDForIdent("ZoneDelayTimer_" . $i))) {
-                $this->RegisterTimer("ZoneDelayTimer_" . $i, 0, "IRR_ZoneDelayTimer(\$_IPS['TARGET'], $i);");
+        for ($i = 0; $i < self::MAX_ZONES; $i++) {
+            if ($i < count($zones)) {
+                // Hier könnte ein sinnvolles Startintervall gesetzt werden, z.B. 0 (Timer aus)
+                $this->SetTimerInterval("ZoneDelayTimer_" . $i, 0);
+            } else {
+                // Falls Zone entfernt, Timer ebenfalls deaktivieren
+                $this->SetTimerInterval("ZoneDelayTimer_" . $i, 0);
             }
         }
     }
@@ -57,11 +61,9 @@ class IrrigationControl extends IPSModule
 
         foreach ($zones as $i => $zone) {
             $ident = "Zone" . $i;
-
             if (!$this->VariableExistsByIdent($ident)) {
                 $this->RegisterVariableBoolean($ident, $zone["Name"], "~Switch");
             }
-
             $this->EnableAction($ident);
         }
     }
@@ -140,7 +142,6 @@ class IrrigationControl extends IPSModule
                 KNX_WriteDPT1($ventil, false);
                 SetValue($this->GetIDForIdent("Zone" . $i), false);
             }
-
             // Zonentimer stoppen
             $this->SetTimerInterval("ZoneDelayTimer_" . $i, 0);
         }
