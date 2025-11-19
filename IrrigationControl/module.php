@@ -149,8 +149,13 @@ class IrrigationControl extends IPSModule
 
     // --- Masterzustand ausschliesslich aus KNX lesen ---
     $masterID = $this->ReadPropertyInteger("MasterID");
-    $master = ($masterID > 0) ? KNX_RequestStatus($masterID) : false;
+    //$master = ($masterID > 0) ? KNX_RequestStatus($masterID) : false;
+    $master = false;
 
+    if ($masterID > 0 && IPS_InstanceExists($masterID)) {
+        $master = (bool) KNX_RequestStatus($masterID);
+    }
+    
     // Master aktiv → ZONE BLOCKIERT
     if ($master === true) {
         IPS_LogMessage("IRR", "Blockiert durch Master-Switch! Zone $zoneIndex wurde NICHT geschaltet.");
