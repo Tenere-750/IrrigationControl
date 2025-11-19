@@ -11,7 +11,6 @@ class IrrigationControl extends IPSModule
         $this->RegisterPropertyInteger("ValveTime", 7);
         $this->RegisterPropertyString("Zones", "[]");
 
-        // Timer für verzögertes Pumpeneinschalten
         $this->RegisterTimer("PumpDelayTimer", 0, "IIRC_PumpDelayExecute(\$_IPS['TARGET']);");
     }
 
@@ -20,9 +19,27 @@ class IrrigationControl extends IPSModule
         parent::ApplyChanges();
     }
 
-    /* ---------------------------------------------------------
-     *  Utility
-     * --------------------------------------------------------- */
+    public function RequestAction($Ident, $Value)
+    {
+        switch ($Ident) {
+
+            case "PumpOn":
+                $this->PumpOn();
+                break;
+
+            case "PumpOff":
+                $this->PumpOff();
+                break;
+
+            case "AllZonesOff":
+                $this->AllZonesOff();
+                break;
+
+            case "ManualZoneClick":
+                $this->ManualZoneClick($Value);
+                break;
+        }
+    }
 
     private function isValidInstance($id)
     {
@@ -36,10 +53,6 @@ class IrrigationControl extends IPSModule
         }
     }
 
-    /* ---------------------------------------------------------
-     *  Pumpensteuerung
-     * --------------------------------------------------------- */
-
     public function PumpOn()
     {
         $pump = $this->ReadPropertyInteger("PumpInstance");
@@ -52,63 +65,51 @@ class IrrigationControl extends IPSModule
         $this->writeKNX($pump, false);
     }
 
-    /* ---------------------------------------------------------
-     *  Verzögertes Pumpeneinschalten (nicht blockierend)
-     * --------------------------------------------------------- */
-
     public function PumpDelayExecute()
     {
         $this->PumpOn();
-        $this->SetTimerInterval("PumpDelayTimer", 0); // deaktivieren
+        $this->SetTimerInterval("PumpDelayTimer", 0);
     }
 
-    private function startPumpDelay()
+    private function StartPumpDelay()
     {
-        $valveTime = $this->ReadPropertyInteger("ValveTime");
-        $this->SetTimerInterval("PumpDelayTimer", $valveTime * 1000);
+        $time = $this->ReadPropertyInteger("ValveTime");
+        $this->SetTimerInterval("PumpDelayTimer", $time * 1000);
     }
-
-    /* ---------------------------------------------------------
-     *  Alle Zonen ausschalten
-     * --------------------------------------------------------- */
 
     public function AllZonesOff()
     {
         $zones = json_decode($this->ReadPropertyString("Zones"), true);
 
         foreach ($zones as $zone) {
-            if ($this->isValidInstance($zone["ValveInstance"])) {
-                $this->writeKNX($zone["ValveInstance"], false);
-            }
+            $this->writeKNX($zone["ValveInstance"], false);
         }
 
         $this->PumpOff();
     }
 
-    /* ---------------------------------------------------------
-     *  Manuelle Steuerliste für UI
-     * --------------------------------------------------------- */
-
-    public function GetZoneControlList()
+    public function ManualZoneClick($json)
     {
+        $row = json_decode($json, true);
         $zones = json_decode($this->ReadPropertyString("Zones"), true);
-        $list = [];
 
-        foreach ($zones as $index => $zone) {
-            $list[] = [
-                "Index" => $index,
-                "Name"  => $zone["Name"],
-                "ButtonOn"  => "AN",
-                "ButtonOff" => "AUS"
-            ];
+        $index = $row["Index"];
+        $col = $row["Column"]; // Name der Spalte
+
+        if (!isset($zones[$index]))
+            return;
+
+        switch ($col) {
+
+            case "BtnOn":
+                $this->ManualZoneOn($index);
+                break;
+
+            case "BtnOff":
+                $this->ManualZoneOff($index);
+                break;
         }
-
-        return $list;
     }
-
-    /* ---------------------------------------------------------
-     *  Zonenein
-     * --------------------------------------------------------- */
 
     public function ManualZoneOn($index)
     {
@@ -117,23 +118,12 @@ class IrrigationControl extends IPSModule
         if (!isset($zones[$index]))
             return;
 
-        $zone = $zones[$index];
+        $valve = $zones[$index]["ValveInstance"];
 
-        if (!$this->isValidInstance($zone["ValveInstance"]))
-            return;
+        $this->writeKNX($valve, true);
 
-        // 1) Ventil öffnen
-        $this->writeKNX($zone["ValveInstance"], true);
-
-        // 2) Verzögerung starten → Pumpe erst nach Verfahrzeit einschalten
-        $this->startPumpDelay();
-
-        IPS_LogMessage("Irrigation", "Zone EIN: " . $zone["Name"]);
+        $this->StartPumpDelay();
     }
-
-    /* ---------------------------------------------------------
-     *  Zonenaus
-     * --------------------------------------------------------- */
 
     public function ManualZoneOff($index)
     {
@@ -142,39 +132,31 @@ class IrrigationControl extends IPSModule
         if (!isset($zones[$index]))
             return;
 
-        $zone = $zones[$index];
+        $valve = $zones[$index]["ValveInstance"];
 
-        if (!$this->isValidInstance($zone["ValveInstance"]))
-            return;
+        $this->writeKNX($valve, false);
 
-        // 1) Ventil schließen
-        $this->writeKNX($zone["ValveInstance"], false);
+        IPS_Sleep(300);
 
-        // 2) Prüfen ob andere Zonen noch offen sind
-        IPS_Sleep(500); // KNX benötigt kurze Zeit zur Verarbeitung
-
-        if ($this->allValvesClosed()) {
+        if ($this->AllValvesClosed())
             $this->PumpOff();
-        }
-
-        IPS_LogMessage("Irrigation", "Zone AUS: " . $zone["Name"]);
     }
 
-    private function allValvesClosed()
+    private function AllValvesClosed()
     {
         $zones = json_decode($this->ReadPropertyString("Zones"), true);
 
         foreach ($zones as $zone) {
+
             $inst = $zone["ValveInstance"];
 
             if (!$this->isValidInstance($inst))
                 continue;
 
-            $statusVar = @IPS_GetObjectIDByIdent("Value", $inst);
+            $var = @IPS_GetObjectIDByIdent("Value", $inst);
 
-            if ($statusVar && GetValueBoolean($statusVar) === true) {
-                return false; // ein Ventil noch offen
-            }
+            if ($var && GetValueBoolean($var) === true)
+                return false;
         }
 
         return true;
