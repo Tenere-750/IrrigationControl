@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 class IrrigationControl extends IPSModule
 {
@@ -9,155 +8,175 @@ class IrrigationControl extends IPSModule
 
         $this->RegisterPropertyInteger("PumpInstance", 0);
         $this->RegisterPropertyInteger("MasterSwitch", 0);
-        $this->RegisterPropertyInteger("ValveTravelTime", 7);
+        $this->RegisterPropertyInteger("ValveTime", 7);
+        $this->RegisterPropertyString("Zones", "[]");
 
-        $this->RegisterPropertyString("Zones", json_encode([]));
-        $this->SetBuffer("ManualStates", json_encode([]));
+        // Timer für verzögertes Pumpeneinschalten
+        $this->RegisterTimer("PumpDelayTimer", 0, "IIRC_PumpDelayExecute(\$_IPS['TARGET']);");
     }
 
     public function ApplyChanges()
     {
         parent::ApplyChanges();
-
-        $zones = json_decode($this->ReadPropertyString("Zones"), true);
-        $manualStates = array_fill(0, count($zones), false);
-        $this->SetBuffer("ManualStates", json_encode($manualStates));
     }
 
-    public function GetConfigurationForm()
+    /* ---------------------------------------------------------
+     *  Utility
+     * --------------------------------------------------------- */
+
+    private function isValidInstance($id)
     {
-        $form = json_decode(file_get_contents(__DIR__ . "/form.json"), true);
+        return ($id > 0 && IPS_InstanceExists($id));
+    }
 
+    private function writeKNX($id, $value)
+    {
+        if ($this->isValidInstance($id)) {
+            KNX_WriteDPT1($id, $value);
+        }
+    }
+
+    /* ---------------------------------------------------------
+     *  Pumpensteuerung
+     * --------------------------------------------------------- */
+
+    public function PumpOn()
+    {
+        $pump = $this->ReadPropertyInteger("PumpInstance");
+        $this->writeKNX($pump, true);
+    }
+
+    public function PumpOff()
+    {
+        $pump = $this->ReadPropertyInteger("PumpInstance");
+        $this->writeKNX($pump, false);
+    }
+
+    /* ---------------------------------------------------------
+     *  Verzögertes Pumpeneinschalten (nicht blockierend)
+     * --------------------------------------------------------- */
+
+    public function PumpDelayExecute()
+    {
+        $this->PumpOn();
+        $this->SetTimerInterval("PumpDelayTimer", 0); // deaktivieren
+    }
+
+    private function startPumpDelay()
+    {
+        $valveTime = $this->ReadPropertyInteger("ValveTime");
+        $this->SetTimerInterval("PumpDelayTimer", $valveTime * 1000);
+    }
+
+    /* ---------------------------------------------------------
+     *  Alle Zonen ausschalten
+     * --------------------------------------------------------- */
+
+    public function AllZonesOff()
+    {
         $zones = json_decode($this->ReadPropertyString("Zones"), true);
-        $manual = json_decode($this->GetBuffer("ManualStates"), true);
 
-        foreach ($form["elements"] as &$panel) {
-            if (!isset($panel["items"])) continue;
-
-            foreach ($panel["items"] as &$item) {
-
-                if ($item["type"] === "List" && $item["name"] === "Zones") {
-                    $item["values"] = $zones;
-                }
-
-                if ($item["type"] === "List" && $item["name"] === "ManualZones") {
-                    $rows = [];
-                    foreach ($zones as $i => $z) {
-                        $rows[] = [
-                            "Index" => $i,
-                            "Name" => $z["Name"],
-                            "Selected" => $manual[$i] ?? false
-                        ];
-                    }
-                    $item["values"] = $rows;
-                }
-
+        foreach ($zones as $zone) {
+            if ($this->isValidInstance($zone["ValveInstance"])) {
+                $this->writeKNX($zone["ValveInstance"], false);
             }
         }
 
-        return json_encode($form);
+        $this->PumpOff();
     }
 
+    /* ---------------------------------------------------------
+     *  Manuelle Steuerliste für UI
+     * --------------------------------------------------------- */
 
-    // =========================================================================
-    // REQUEST ACTIONS
-    // =========================================================================
-
-    public function RequestAction($Ident, $Value)
+    public function GetZoneControlList()
     {
-        switch ($Ident) {
-
-            case "ManuellZoneSwitch":
-                $this->ManualZoneSwitch($Value);
-                break;
-
-            case "SwitchAllOff":
-                $this->SwitchAllOff();
-                break;
-
-            default:
-                $this->SendDebug("RequestAction", "Unbekannter Ident: $Ident", 0);
-        }
-    }
-
-
-    // =========================================================================
-    // MANUELLE ZONENSTEUERUNG
-    // =========================================================================
-
-    private function ManualZoneSwitch($payload)
-    {
-        $data = json_decode($payload, true);
-        if (!is_array($data) || !isset($data["Index"]) || !isset($data["State"])) return;
-
-        $index = (int)$data["Index"];
-        $state = (bool)$data["State"];
-
         $zones = json_decode($this->ReadPropertyString("Zones"), true);
-        $manual = json_decode($this->GetBuffer("ManualStates"), true);
+        $list = [];
 
-        if (!isset($zones[$index])) return;
-
-        $valveID = (int)$zones[$index]["ValveInstance"];
-
-        if ($valveID > 0) {
-            KNX_WriteDPT1($valveID, $state);
-            IPS_Sleep(150);
+        foreach ($zones as $index => $zone) {
+            $list[] = [
+                "Index" => $index,
+                "Name"  => $zone["Name"],
+                "ButtonOn"  => "AN",
+                "ButtonOff" => "AUS"
+            ];
         }
 
-        $manual[$index] = $state;
-        $this->SetBuffer("ManualStates", json_encode($manual));
-
-        if ($state) {
-            $this->Pump(true);
-        } else {
-            if (!$this->AnyZoneActive($manual)) {
-                $this->Pump(false);
-            }
-        }
+        return $list;
     }
 
-    private function AnyZoneActive(array $states): bool
-    {
-        foreach ($states as $s) {
-            if ($s === true) return true;
-        }
-        return false;
-    }
+    /* ---------------------------------------------------------
+     *  Zonenein
+     * --------------------------------------------------------- */
 
-
-    // =========================================================================
-    // ALLES AUS
-    // =========================================================================
-
-    private function SwitchAllOff()
+    public function ManualZoneOn($index)
     {
         $zones = json_decode($this->ReadPropertyString("Zones"), true);
 
-        foreach ($zones as $z) {
-            if ((int)$z["ValveInstance"] > 0) {
-                KNX_WriteDPT1((int)$z["ValveInstance"], false);
-                IPS_Sleep(100);
+        if (!isset($zones[$index]))
+            return;
+
+        $zone = $zones[$index];
+
+        if (!$this->isValidInstance($zone["ValveInstance"]))
+            return;
+
+        // 1) Ventil öffnen
+        $this->writeKNX($zone["ValveInstance"], true);
+
+        // 2) Verzögerung starten → Pumpe erst nach Verfahrzeit einschalten
+        $this->startPumpDelay();
+
+        IPS_LogMessage("Irrigation", "Zone EIN: " . $zone["Name"]);
+    }
+
+    /* ---------------------------------------------------------
+     *  Zonenaus
+     * --------------------------------------------------------- */
+
+    public function ManualZoneOff($index)
+    {
+        $zones = json_decode($this->ReadPropertyString("Zones"), true);
+
+        if (!isset($zones[$index]))
+            return;
+
+        $zone = $zones[$index];
+
+        if (!$this->isValidInstance($zone["ValveInstance"]))
+            return;
+
+        // 1) Ventil schließen
+        $this->writeKNX($zone["ValveInstance"], false);
+
+        // 2) Prüfen ob andere Zonen noch offen sind
+        IPS_Sleep(500); // KNX benötigt kurze Zeit zur Verarbeitung
+
+        if ($this->allValvesClosed()) {
+            $this->PumpOff();
+        }
+
+        IPS_LogMessage("Irrigation", "Zone AUS: " . $zone["Name"]);
+    }
+
+    private function allValvesClosed()
+    {
+        $zones = json_decode($this->ReadPropertyString("Zones"), true);
+
+        foreach ($zones as $zone) {
+            $inst = $zone["ValveInstance"];
+
+            if (!$this->isValidInstance($inst))
+                continue;
+
+            $statusVar = @IPS_GetObjectIDByIdent("Value", $inst);
+
+            if ($statusVar && GetValueBoolean($statusVar) === true) {
+                return false; // ein Ventil noch offen
             }
         }
 
-        $this->Pump(false);
-
-        $manual = array_fill(0, count($zones), false);
-        $this->SetBuffer("ManualStates", json_encode($manual));
-    }
-
-
-    // =========================================================================
-    // PUMPE
-    // =========================================================================
-
-    private function Pump(bool $state)
-    {
-        $id = $this->ReadPropertyInteger("PumpInstance");
-
-        if ($id > 0) {
-            KNX_WriteDPT1($id, $state);
-        }
+        return true;
     }
 }
