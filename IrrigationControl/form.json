@@ -1,78 +1,84 @@
 {
-    "elements": [
+  "elements": [
+    {
+      "type": "Label",
+      "caption": "Irrigation Control - Einstellungen"
+    },
+    {
+      "name": "MasterID",
+      "type": "SelectInstance",
+      "caption": "Master KNX Instanz",
+      "validParentTypes": [0]
+    },
+    {
+      "name": "PumpID",
+      "type": "SelectInstance",
+      "caption": "Pumpen KNX Instanz",
+      "validParentTypes": [0]
+    },
+    {
+      "name": "GlobalTravelTime",
+      "type": "NumberSpinner",
+      "suffix": "Sekunden",
+      "caption": "Globale Verfahrzeit"
+    },
+    {
+      "name": "ZoneList",
+      "type": "List",
+      "caption": "Zonen",
+      "add": true,
+      "rowCount": 10,
+      "columns": [
         {
-            "type": "ExpansionPanel",
-            "caption": "Allgemeine Einstellungen",
-            "items": [
-                {
-                    "type": "SelectObject",
-                    "name": "MasterID",
-                    "caption": "Master KNX Instanz"
-                },
-                {
-                    "type": "SelectObject",
-                    "name": "PumpID",
-                    "caption": "Pumpen KNX Instanz"
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "GlobalTravelTime",
-                    "caption": "Ventil Verfahrzeit (Sekunden)",
-                    "minimum": 1,
-                    "maximum": 60,
-                    "value": 7
-                }
-            ]
+          "name": "Name",
+          "caption": "Name",
+          "width": "150px",
+          "add": "Neue Zone",
+          "edit": true
         },
-
         {
-            "type": "ExpansionPanel",
-            "caption": "Zonen",
-            "items": [
-                {
-                    "type": "List",
-                    "name": "ZoneList",
-                    "caption": "Zonen",
-                    "rowCount": 10,
-                    "add": true,
-                    "delete": true,
-                    "sort": {
-                        "column": "Name",
-                        "direction": "ascending"
-                    },
-                    "columns": [
-                        {
-                            "caption": "Name",
-                            "name": "Name",
-                            "width": "200px",
-                            "edit": { "type": "ValidationTextBox" },
-                            "add": "Neue Zone"
-                        },
-                        {
-                            "caption": "Ventil KNX Instanz",
-                            "name": "Ventil",
-                            "width": "200px",
-                            "edit": { "type": "SelectObject" },
-                            "add": 0
-                        },
-                        {
-                            "caption": "Verfahrzeit (Sekunden)",
-                            "name": "Verfahrzeit",
-                            "width": "150px",
-                            "edit": { "type": "NumberSpinner" },
-                            "add": 7
-                        }
-                    ]
-                }
-            ]
-        }
-    ],
-
-    "actions": [
+          "name": "Ventil",
+          "caption": "Ventil KNX ID",
+          "width": "150px",
+          "type": "SelectInstance",
+          "validParentTypes": [0]
+        },
         {
-            "type": "Button",
-            "caption": "Konfiguration neu laden",
-            "onClick": "echo \"Konfiguration aktualisiert.\";"
+          "name": "Verfahrzeit",
+          "caption": "Verfahrzeit",
+          "width": "100px",
+          "edit": true
         }
-    ]
+      ]
+    }
+  ],
+
+  "actions": [
+    {
+      "type": "Label",
+      "caption": "Manuelle Steuerung"
+    },
+    {
+      "type": "Button",
+      "label": "Master AN",
+      "onClick": "IRR_Master($id, true);"
+    },
+    {
+      "type": "Button",
+      "label": "Master AUS",
+      "onClick": "IRR_Master($id, false);"
+    },
+    {
+      "type": "Button",
+      "label": "Pumpe AN",
+      "onClick": "IRR_Pump($id, true);"
+    },
+    {
+      "type": "Button",
+      "label": "Pumpe AUS",
+      "onClick": "IRR_Pump($id, false);"
+    }
+  ],
+
+  "status": []
 }
