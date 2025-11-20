@@ -6,7 +6,7 @@ Dieses Modul steuert eine Bewässerungsanlage über KNX-Motorkugelhähne und ein
 
 - 7 frei benennbare Bewässerungszonen
 - KNX-Steuerung über `KNX_WriteDPT1'
-- Achtung! Die KNX DPT 1 Instanz des Master Switch MUSS zwingend gelesen werden können!
+- Rudimentäre manuelle Steuerung via Webfront
 
 ## Installation
 
