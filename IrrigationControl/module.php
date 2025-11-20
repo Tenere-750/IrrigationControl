@@ -5,29 +5,29 @@ class IrrigationControl extends IPSModule<?php
 declare(strict_types=1);
 
 class IrrigationControl extends IPSModule
-{
-    public function Create()
+{public function Create()
     {
         parent::Create();
 
         // properties
         $this->RegisterPropertyInteger("MasterID", 0);
         $this->RegisterPropertyInteger("PumpID", 0);
-        $this->RegisterPropertyInteger("GlobalTravelTime", 7);
+        $this->RegisterPropertyInteger("GlobalTravelTime", 7); // seconds
         $this->RegisterPropertyInteger("MaxParallelZones", 2);
         $this->RegisterPropertyString("ZoneList", "[]");
 
         // timers
-        $this->RegisterTimer("PumpOnTimer", 0, 'IRR_PumpOnTimer($_IPS["TARGET"]);');
-        $this->RegisterTimer("SequenceTimer", 0, 'IRR_SequenceTick($_IPS["TARGET"]);');
+        $this->RegisterTimer("PumpOnTimer", 0, 'IRR_PumpOnTimer($_IPS[\'TARGET\']);');
+        $this->RegisterTimer("SequenceTimer", 0, 'IRR_SequenceTick($_IPS[\'TARGET\']);');
 
         // runtime buffers
-        $this->SetBuffer('ActiveZones', '0');
-        $this->SetBuffer('PumpOnPending', '0');
+        $this->SetBuffer("ActiveZones", "0");
+        $this->SetBuffer("PumpOnPending", "0");
 
-        // FIX: Valid JSON instead of empty string
-        $this->WriteAttributeString('SequenceState', json_encode([]));
+        // ATTRIBUTES MUST BE REGISTERED!
+        $this->RegisterAttributeString("SequenceState", "");
     }
+
 
     public function ApplyChanges()
     {
