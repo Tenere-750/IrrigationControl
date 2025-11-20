@@ -7,78 +7,101 @@
     {
       "name": "MasterID",
       "type": "SelectInstance",
-      "caption": "Master KNX Instanz",
+      "caption": "Master KNX Instanz (DPT1)",
       "validParentTypes": [0]
     },
     {
       "name": "PumpID",
       "type": "SelectInstance",
-      "caption": "Pumpen KNX Instanz",
+      "caption": "Pumpen KNX Instanz (DPT1)",
       "validParentTypes": [0]
     },
     {
       "name": "GlobalTravelTime",
       "type": "NumberSpinner",
       "suffix": "Sekunden",
-      "caption": "Globale Verfahrzeit"
+      "caption": "Globale Verfahrzeit (Sek)"
     },
     {
-      "name": "ZoneList",
-      "type": "List",
+      "name": "MaxParallelZones",
+      "type": "NumberSpinner",
+      "caption": "Max. parallele Zonen",
+      "minimum": 1,
+      "maximum": 7
+    },
+    {
+      "type": "ExpansionPanel",
       "caption": "Zonen",
-      "add": true,
-      "rowCount": 10,
-      "columns": [
+      "items": [
         {
-          "name": "Name",
-          "caption": "Name",
-          "width": "150px",
-          "add": "Neue Zone",
-          "edit": true
+          "name": "ZoneList",
+          "type": "List",
+          "caption": "Zonen",
+          "rowCount": 7,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "name": "Enabled", "caption": "Aktiv", "width": "80px", "edit": { "type": "CheckBox" }, "add": true },
+            { "name": "Name", "caption": "Name", "width": "200px", "edit": { "type": "ValidationTextBox" }, "add": "Neue Zone" },
+            { "name": "Ventil", "caption": "Ventil KNX Instanz", "width": "200px", "edit": { "type": "SelectInstance" }, "validParentTypes": [0], "add": 0 },
+            { "name": "Verfahrzeit", "caption": "Verfahrzeit (s)", "width": "120px", "edit": { "type": "NumberSpinner" }, "add": 7 },
+            { "name": "RuntimeSeq1", "caption": "Laufzeit Seq1 (min)", "width": "140px", "edit": { "type": "NumberSpinner" }, "add": 5 },
+            { "name": "RuntimeSeq2", "caption": "Laufzeit Seq2 (min)", "width": "140px", "edit": { "type": "NumberSpinner" }, "add": 5 }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "Sequenzen",
+      "items": [
+        {
+          "name": "Sequence1Enabled",
+          "type": "CheckBox",
+          "caption": "Sequenz 1 aktiv",
+          "add": true
         },
         {
-          "name": "Ventil",
-          "caption": "Ventil KNX ID",
-          "width": "150px",
-          "type": "SelectInstance",
-          "validParentTypes": [0]
+          "name": "Sequence1Start",
+          "type": "TimeSpinner",
+          "caption": "Startzeit Sequenz 1"
         },
         {
-          "name": "Verfahrzeit",
-          "caption": "Verfahrzeit",
-          "width": "100px",
-          "edit": true
+          "name": "Sequence1Order",
+          "type": "ValidationTextBox",
+          "caption": "Reihenfolge (comma-separated indices, z.B. 0,1,2)"
+        },
+        {
+          "type": "Divider"
+        },
+        {
+          "name": "Sequence2Enabled",
+          "type": "CheckBox",
+          "caption": "Sequenz 2 aktiv",
+          "add": true
+        },
+        {
+          "name": "Sequence2Start",
+          "type": "TimeSpinner",
+          "caption": "Startzeit Sequenz 2"
+        },
+        {
+          "name": "Sequence2Order",
+          "type": "ValidationTextBox",
+          "caption": "Reihenfolge (comma-separated indices, z.B. 3,4,5)"
         }
       ]
     }
   ],
-
   "actions": [
-    {
-      "type": "Label",
-      "caption": "Manuelle Steuerung"
-    },
-    {
-      "type": "Button",
-      "label": "Master AN",
-      "onClick": "IRR_Master($id, true);"
-    },
-    {
-      "type": "Button",
-      "label": "Master AUS",
-      "onClick": "IRR_Master($id, false);"
-    },
-    {
-      "type": "Button",
-      "label": "Pumpe AN",
-      "onClick": "IRR_Pump($id, true);"
-    },
-    {
-      "type": "Button",
-      "label": "Pumpe AUS",
-      "onClick": "IRR_Pump($id, false);"
-    }
+    { "type": "Label", "caption": "Manuelle Steuerung" },
+    { "type": "Button", "caption": "Master AN", "onClick": "IRR_Master($id, true);" },
+    { "type": "Button", "caption": "Master AUS", "onClick": "IRR_Master($id, false);" },
+    { "type": "Button", "caption": "Pumpe AN", "onClick": "IRR_Pump($id, true);" },
+    { "type": "Button", "caption": "Pumpe AUS", "onClick": "IRR_Pump($id, false);" },
+    { "type": "Label", "caption": "Sequenzen manuell starten" },
+    { "type": "Button", "caption": "Run Sequence 1 now", "onClick": "IRR_RunSequence($id,1);" },
+    { "type": "Button", "caption": "Run Sequence 2 now", "onClick": "IRR_RunSequence($id,2);" }
   ],
-
   "status": []
 }
