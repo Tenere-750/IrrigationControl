@@ -22,7 +22,7 @@ class IrrigationControl extends IPSModule
         $this->SetBuffer("ActiveZones", "0");
         $this->SetBuffer("PumpOnPending", "0");
 
-        // Attributes (MÜSSEN registriert werden!)
+        // Attributes
         $this->RegisterAttributeString("SequenceState", json_encode([]));
     }
 
@@ -51,7 +51,7 @@ class IrrigationControl extends IPSModule
         }
         $this->EnableAction("Pump");
 
-        // Zone list
+        // Zones
         $zones = json_decode($this->ReadPropertyString("ZoneList"), true) ?? [];
 
         foreach ($zones as $i => $zone) {
@@ -173,7 +173,8 @@ class IrrigationControl extends IPSModule
 
     public function SwitchZone(int $i, bool $state): bool
     {
-        $zones = json_decode($this->ReadPropertyString("ZoneList”), true) ?? [];
+        // FIXED quote error here ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true) ?? [];
 
         if (!isset($zones[$i])) return false;
 
@@ -182,7 +183,7 @@ class IrrigationControl extends IPSModule
         }
 
         $ventil = intval($zones[$i]["Ventil"] ?? 0);
-        $pumpID = $this->ReadPropertyInteger("PumpID");
+        $pumpID  = $this->ReadPropertyInteger("PumpID");
 
         if ($ventil <= 0 || !IPS_InstanceExists($ventil)) {
             return false;
@@ -192,7 +193,6 @@ class IrrigationControl extends IPSModule
 
         if ($state) {
 
-            // parallel checks
             $max = (int)$this->ReadPropertyInteger("MaxParallelZones");
 
             $currentActive = [];
@@ -227,7 +227,7 @@ class IrrigationControl extends IPSModule
             return true;
         }
 
-        // deactivate
+        // Deactivate
         KNX_WriteDPT1($ventil, false);
 
         $active--;
@@ -237,7 +237,9 @@ class IrrigationControl extends IPSModule
         if ($active === 0) {
             KNX_WriteDPT1($pumpID, false);
             $pvid = $this->GetIDForIdent("Pump");
-            if ($pvid !== false) SetValue($pvid, false);
+            if ($pvid !== false) {
+                SetValue($pvid, false);
+            }
         }
 
         return true;
@@ -261,7 +263,7 @@ class IrrigationControl extends IPSModule
 
     public function SequenceTick(): void
     {
-        // Sequencer kommt später wieder rein. Placeholder damit Modul lädt.
+        // placeholder for future sequencer
     }
 
     private function ReadMasterState(int $id): bool
