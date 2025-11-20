@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 class IrrigationControl extends IPSModule
 {
-    private const ZONE_COUNT_MAX = 20; // safety upper bound (UI limits it to 7 rows but be safe)
-
     public function Create()
     {
         parent::Create();
@@ -16,412 +14,525 @@ class IrrigationControl extends IPSModule
         $this->RegisterPropertyInteger("MaxParallelZones", 2);
         $this->RegisterPropertyString("ZoneList", "[]");
 
-        // sequences
-        $this->RegisterPropertyBoolean("Sequence1Enabled", false);
-        $this->RegisterPropertyString("Sequence1Start", "06:00");
-        $this->RegisterPropertyString("Sequence1Order", "");
+        // timers
+        $this->RegisterTimer("PumpOnTimer", 0, 'IRR_PumpOnTimer($_IPS[\'TARGET\']);');
+        $this->RegisterTimer("SequenceTimer", 0, 'IRR_SequenceTick($_IPS[\'TARGET\']);');
 
-        $this->RegisterPropertyBoolean("Sequence2Enabled", false);
-        $this->RegisterPropertyString("Sequence2Start", "20:00");
-        $this->RegisterPropertyString("Sequence2Order", "");
+        // runtime buffers
+        $this->SetBuffer("ActiveZones", "0");
+        $this->SetBuffer("PumpOnPending", "0");
 
-        // timers (must be registered in Create)
-        $this->RegisterTimer("SequenceTimer1", 0, 'IRR_RunSequence(' . $this->InstanceID . ',1);');
-        $this->RegisterTimer("SequenceTimer2", 0, 'IRR_RunSequence(' . $this->InstanceID . ',2);');
-        $this->RegisterTimer("PumpOnTimer", 0, 'IRR_PumpOnTimer(' . $this->InstanceID . ');');
-
-        // per-zone timers: ZoneRunTimer_<i> (stop zone after runtime) and CloseDelayTimer_<i> (close previous after travel)
-        for ($i=0; $i<7; $i++) {
-            $this->RegisterTimer('ZoneRunTimer_' . $i, 0, 'IRR_ZoneStopTimer(' . $this->InstanceID . ',' . $i . ');');
-            $this->RegisterTimer('CloseDelayTimer_' . $i, 0, 'IRR_CloseDelayTimer(' . $this->InstanceID . ',' . $i . ');');
-        }
-
-        // buffers
-        $this->SetBuffer('ActiveZones', '0'); // integer as string
-        $this->SetBuffer('SequenceState', json_encode(['running'=>false,'seq'=>0,'queue'=>[]]));
-        $this->SetBuffer('PumpOnPending', '0');
+        // sequence state attribute: JSON or empty
+        $this->WriteAttributeString('SequenceState', '');
     }
 
     public function ApplyChanges()
     {
         parent::ApplyChanges();
-
-        // create WebFront variables for manual control
         $this->RegisterWebFrontVariables();
-
-        // setup sequence timers according to configured start times
-        $this->SetupSequenceTimer(1, $this->ReadPropertyString('Sequence1Start'), $this->ReadPropertyBoolean('Sequence1Enabled'));
-        $this->SetupSequenceTimer(2, $this->ReadPropertyString('Sequence2Start'), $this->ReadPropertyBoolean('Sequence2Enabled'));
+        // ensure timers not running on apply
+        $this->SetTimerInterval("PumpOnTimer", 0);
+        $this->SetTimerInterval("SequenceTimer", 0);
     }
 
-    // Register WebFront variables (Master, Pump, ZoneX)
     private function RegisterWebFrontVariables(): void
     {
-        if (@IPS_GetObjectIDByIdent('Master', $this->InstanceID) === false) {
-            $this->RegisterVariableBoolean('Master', 'Master', '~Switch');
-            $this->EnableAction('Master');
+        // Master
+        if (@IPS_GetObjectIDByIdent("Master", $this->InstanceID) === false) {
+            $this->RegisterVariableBoolean("Master", "Master", "~Switch");
         }
-        if (@IPS_GetObjectIDByIdent('Pump', $this->InstanceID) === false) {
-            $this->RegisterVariableBoolean('Pump', 'Pumpe', '~Switch');
-            $this->EnableAction('Pump');
+        $this->EnableAction("Master");
+
+        // Pump
+        if (@IPS_GetObjectIDByIdent("Pump", $this->InstanceID) === false) {
+            $this->RegisterVariableBoolean("Pump", "Pumpe", "~Switch");
         }
+        $this->EnableAction("Pump");
 
-        $zones = json_decode($this->ReadPropertyString('ZoneList'), true);
-        if (!is_array($zones)) $zones = [];
-
-        for ($i=0; $i<count($zones); $i++) {
-            $ident = 'Zone' . $i;
+        // zones
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true);
+        if (!is_array($zones)) return;
+        foreach ($zones as $i => $zone) {
+            $ident = "Zone" . $i;
             if (@IPS_GetObjectIDByIdent($ident, $this->InstanceID) === false) {
-                $this->RegisterVariableBoolean($ident, $zones[$i]['Name'] ?? 'Zone ' . ($i+1), '~Switch');
+                $name = ($zone['Name'] ?? "Zone " . ($i + 1));
+                $this->RegisterVariableBoolean($ident, $name, "~Switch");
             } else {
                 // update name if changed
                 $vid = $this->GetIDForIdent($ident);
-                if ($vid !== false && isset($zones[$i]['Name'])) {
-                    IPS_SetName($vid, $zones[$i]['Name']);
+                if ($vid !== false && isset($zone['Name'])) {
+                    IPS_SetName($vid, $zone['Name']);
                 }
             }
             $this->EnableAction($ident);
         }
     }
 
-    // ========================================================================
-    // RequestAction - WebFront control
-    // ========================================================================
+    // -----------------------------
+    // RequestAction
+    // -----------------------------
     public function RequestAction($Ident, $Value)
     {
-        if ($Ident === 'Master') {
-            $this->IRR_Master((bool)$Value);
-            // update displayed state by reading KNX instance (best-effort)
-            $masterID = $this->ReadPropertyInteger('MasterID');
+        // master
+        if ($Ident === "Master") {
+            $this->Master((bool)$Value);
+            // reflect real KNX state if possible
+            $masterID = $this->ReadPropertyInteger("MasterID");
             $state = $this->ReadMasterState($masterID);
-            SetValue($this->GetIDForIdent('Master'), $state);
+            SetValue($this->GetIDForIdent("Master"), $state);
             return;
         }
 
-        if ($Ident === 'Pump') {
-            $this->IRR_Pump((bool)$Value);
-            SetValue($this->GetIDForIdent('Pump'), (bool)$Value);
+        // pump
+        if ($Ident === "Pump") {
+            $this->Pump((bool)$Value);
+            SetValue($this->GetIDForIdent("Pump"), (bool)$Value);
             return;
         }
 
-        if (str_starts_with($Ident, 'Zone')) {
+        // zones: ident = "ZoneX"
+        if (str_starts_with($Ident, "Zone")) {
             $index = intval(substr($Ident, 4));
-            $ok = $this->IRR_SwitchZone($index, (bool)$Value);
-            // only set WF variable if action succeeded
-            if ($ok) SetValue($this->GetIDForIdent($Ident), (bool)$Value);
-            return;
-        }
-    }
-
-    // ========================================================================
-    // Sequenz Timer Setup
-    // ========================================================================
-    private function SetupSequenceTimer(int $seq, string $timeStr, bool $enabled): void
-    {
-        $timerIdent = 'SequenceTimer' . $seq;
-        if (!$enabled) {
-            $this->SetTimerInterval($timerIdent, 0);
-            return;
-        }
-        $next = $this->CalcNextEventTimestamp($timeStr);
-        $now = time();
-        $intervalSec = max(1, $next - $now);
-        $this->SetTimerInterval($timerIdent, $intervalSec * 1000);
-    }
-
-    // ========================================================================
-    // RunSequence - timer callback or manual call
-    // seqNumber: 1 or 2
-    // ========================================================================
-    public function RunSequence(int $seqNumber)
-    {
-        // only run if Master is false
-        $master = $this->ReadMasterState($this->ReadPropertyInteger('MasterID'));
-        if ($master === true) {
-            IPS_LogMessage('IrrigationControl','RunSequence ' . $seqNumber . ' blocked by Master.');
-            // reschedule next
-            $this->SetupSequenceTimer($seqNumber, $this->ReadPropertyString('Sequence' . $seqNumber . 'Start'), true);
-            return;
-        }
-
-        $enabled = $this->ReadPropertyBoolean('Sequence' . $seqNumber . 'Enabled');
-        if (!$enabled) {
-            $this->SetupSequenceTimer($seqNumber, $this->ReadPropertyString('Sequence' . $seqNumber . 'Start'), false);
-            return;
-        }
-
-        // Build sequence queue
-        $orderStr = trim($this->ReadPropertyString('Sequence' . $seqNumber . 'Order'));
-        if ($orderStr === '') {
-            IPS_LogMessage('IrrigationControl','RunSequence ' . $seqNumber . ': empty order');
-            $this->SetupSequenceTimer($seqNumber, $this->ReadPropertyString('Sequence' . $seqNumber . 'Start'), true);
-            return;
-        }
-
-        $indices = array_values(array_filter(array_map('intval', array_map('trim', explode(',', $orderStr))), function($v){ return $v >= 0; }));
-
-        $zones = json_decode($this->ReadPropertyString('ZoneList'), true);
-        if (!is_array($zones)) $zones = [];
-
-        // filter indices to valid, enabled zones and with valid ventil instance
-        $queue = [];
-        foreach ($indices as $idx) {
-            if (!isset($zones[$idx])) continue;
-            $z = $zones[$idx];
-            if (!($z['Enabled'] ?? true)) continue;
-            $vent = intval($z['Ventil'] ?? 0);
-            if ($vent <= 0 || !IPS_InstanceExists($vent)) continue;
-            $queue[] = $idx;
-        }
-
-        if (count($queue) === 0) {
-            IPS_LogMessage('IrrigationControl','RunSequence ' . $seqNumber . ': no valid zones');
-            $this->SetupSequenceTimer($seqNumber, $this->ReadPropertyString('Sequence' . $seqNumber . 'Start'), true);
-            return;
-        }
-
-        IPS_LogMessage('IrrigationControl','RunSequence ' . $seqNumber . ' starting: queue=' . implode(',', $queue));
-
-        // store sequence state in buffer
-        $state = ['running'=>true,'seq'=>$seqNumber,'queue'=>$queue,'pointer'=>0];
-        $this->SetBuffer('SequenceState', json_encode($state));
-
-        // start as many zones as allowed by MaxParallelZones
-        $this->SequenceStartNext();
-        // reschedule next day's run
-        $this->SetupSequenceTimer($seqNumber, $this->ReadPropertyString('Sequence' . $seqNumber . 'Start'), true);
-    }
-
-    // ========================================================================
-    // SequenceStartNext: open next zones up to MaxParallelZones
-    // ========================================================================
-    private function SequenceStartNext(): void
-    {
-        $state = json_decode($this->GetBuffer('SequenceState'), true);
-        if (!is_array($state) || !$state['running']) return;
-
-        $queue = $state['queue'];
-        $pointer = intval($state['pointer']);
-        $maxParallel = max(1, intval($this->ReadPropertyInteger('MaxParallelZones')));
-        $active = intval($this->GetBuffer('ActiveZones'));
-
-        // open while we can
-        while ($pointer < count($queue) && $active < $maxParallel) {
-            $zoneIndex = $queue[$pointer];
-            $ok = $this->OpenZoneForSequence($zoneIndex);
-            if (!$ok) {
-                IPS_LogMessage('IrrigationControl','SequenceStartNext: failed to open zone ' . $zoneIndex);
+            $ok = $this->SwitchZone($index, (bool)$Value);
+            if ($ok) {
+                SetValue($this->GetIDForIdent($Ident), (bool)$Value);
             } else {
-                $active++;
-                $this->SetBuffer('ActiveZones', strval($active));
+                // restore displayed value to actual
+                $cur = GetValue($this->GetIDForIdent($Ident));
+                SetValue($this->GetIDForIdent($Ident), $cur);
             }
-            // if there was a previously opened zone and it must be closed after travel time,
-            // schedule CloseDelayTimer for the previous zone (to close after travel)
-            if ($pointer-1 >= 0) {
-                $prev = $queue[$pointer-1];
-                $travel = $this->GetZoneTravel($prev);
-                $this->SetTimerInterval('CloseDelayTimer_' . $prev, intval($travel * 1000));
-            }
-            $pointer++;
-        }
-
-        $state['pointer'] = $pointer;
-        // if pointer reached end and no more active zones -> sequence finished; else store state
-        $state['running'] = ($pointer < count($queue) || $this->GetBuffer('ActiveZones') !== '0');
-        $this->SetBuffer('SequenceState', json_encode($state));
-    }
-
-    // ========================================================================
-    // Open a zone as part of a sequence:
-    // - open valve immediately
-    // - start ZoneRunTimer_<i> for the runtime
-    // - if this is the first active zone -> schedule PumpOnTimer after travel
-    // ========================================================================
-    private function OpenZoneForSequence(int $zoneIndex): bool
-    {
-        $zones = json_decode($this->ReadPropertyString('ZoneList'), true);
-        if (!isset($zones[$zoneIndex])) return false;
-        $zone = $zones[$zoneIndex];
-        $vent = intval($zone['Ventil'] ?? 0);
-        if ($vent <= 0 || !IPS_InstanceExists($vent)) return false;
-
-        // open valve
-        KNX_WriteDPT1($vent, true);
-        IPS_LogMessage('IrrigationControl','OpenZoneForSequence: opened valve ' . $vent . ' (zone ' . $zoneIndex . ')');
-
-        // determine runtime minutes for current sequence (SequenceState contains seq)
-        $state = json_decode($this->GetBuffer('SequenceState'), true);
-        $seq = intval($state['seq'] ?? 1);
-        $runtimeMin = intval($zone['RuntimeSeq' . $seq] ?? 0);
-        if ($runtimeMin <= 0) $runtimeMin = 1; // default 1 minute
-        $runtimeMs = $runtimeMin * 60 * 1000;
-
-        // start zone run timer to stop this zone after runtime
-        $this->SetTimerInterval('ZoneRunTimer_' . $zoneIndex, $runtimeMs);
-
-        // if this is the first active zone -> schedule pump on after travel
-        $active = intval($this->GetBuffer('ActiveZones'));
-        if ($active === 0) {
-            $travel = $this->GetZoneTravel($zoneIndex);
-            $this->SetBuffer('PumpOnPending', '1');
-            $this->SetTimerInterval('PumpOnTimer', intval($travel * 1000));
-            IPS_LogMessage('IrrigationControl','PumpOnTimer scheduled after ' . $travel . 's');
-        }
-
-        return true;
-    }
-
-    // ========================================================================
-    // Close Delay Timer callback: closes previous zone after travel time
-    // ========================================================================
-    public function CloseDelayTimer(int $zoneIndex)
-    {
-        // close this zone (called after next valve opened and travel delay)
-        $zones = json_decode($this->ReadPropertyString('ZoneList'), true);
-        if (!isset($zones[$zoneIndex])) return;
-        $vent = intval($zones[$zoneIndex]['Ventil'] ?? 0);
-        if ($vent > 0 && IPS_InstanceExists($vent)) {
-            KNX_WriteDPT1($vent, false);
-            IPS_LogMessage('IrrigationControl','CloseDelayTimer: closed valve of zone ' . $zoneIndex);
-            // decrement active
-            $active = intval($this->GetBuffer('ActiveZones'));
-            $active = max(0, $active - 1);
-            $this->SetBuffer('ActiveZones', strval($active));
-            // if no active zones -> stop pump
-            if ($active === 0) {
-                $pump = $this->ReadPropertyInteger('PumpID');
-                if ($pump > 0 && IPS_InstanceExists($pump)) {
-                    KNX_WriteDPT1($pump, false);
-                    if ($this->GetIDForIdent('Pump') !== false) SetValue($this->GetIDForIdent('Pump'), false);
-                }
-                // sequence may be finished; ensure SequenceStartNext updates state
-                $this->SequenceStartNext();
-            } else {
-                // try to start more zones if there is queue left
-                $this->SequenceStartNext();
-            }
-        }
-        // stop timer
-        $this->SetTimerInterval('CloseDelayTimer_' . $zoneIndex, 0);
-    }
-
-    // ========================================================================
-    // ZoneRunTimer callback: triggered when a zone's runtime is finished -> close zone
-    // ========================================================================
-    public function ZoneStopTimer(int $zoneIndex)
-    {
-        $zones = json_decode($this->ReadPropertyString('ZoneList'), true);
-        if (!isset($zones[$zoneIndex])) return;
-        $vent = intval($zones[$zoneIndex]['Ventil'] ?? 0);
-        if ($vent > 0 && IPS_InstanceExists($vent)) {
-            KNX_WriteDPT1($vent, false);
-            IPS_LogMessage('IrrigationControl','ZoneStopTimer: runtime ended, closed zone ' . $zoneIndex);
-            // decrement active
-            $active = intval($this->GetBuffer('ActiveZones'));
-            $active = max(0, $active - 1);
-            $this->SetBuffer('ActiveZones', strval($active));
-            // if no active left -> stop pump
-            if ($active === 0) {
-                $pump = $this->ReadPropertyInteger('PumpID');
-                if ($pump > 0 && IPS_InstanceExists($pump)) {
-                    KNX_WriteDPT1($pump, false);
-                    if ($this->GetIDForIdent('Pump') !== false) SetValue($this->GetIDForIdent('Pump'), false);
-                }
-            }
-            // sequence continue opening next queued zone(s) if any
-            $this->SequenceStartNext();
-        }
-        // stop this timer
-        $this->SetTimerInterval('ZoneRunTimer_' . $zoneIndex, 0);
-    }
-
-    // ========================================================================
-    // PumpOnTimer: after travel, turn pump on
-    // ========================================================================
-    public function PumpOnTimer()
-    {
-        if ($this->GetBuffer('PumpOnPending') !== '1') {
-            $this->SetTimerInterval('PumpOnTimer', 0);
             return;
         }
-        $pump = $this->ReadPropertyInteger('PumpID');
-        if ($pump > 0 && IPS_InstanceExists($pump)) {
-            KNX_WriteDPT1($pump, true);
-            if ($this->GetIDForIdent('Pump') !== false) SetValue($this->GetIDForIdent('Pump'), true);
-            IPS_LogMessage('IrrigationControl','PumpOnTimer: pump switched on');
+    }
+
+    // -----------------------------
+    // Master: set and AllOff on true
+    // -----------------------------
+    public function Master(bool $state): void
+    {
+        $masterID = $this->ReadPropertyInteger("MasterID");
+        if ($masterID > 0 && IPS_InstanceExists($masterID)) {
+            KNX_WriteDPT1($masterID, $state);
         }
-        $this->SetBuffer('PumpOnPending', '0');
-        $this->SetTimerInterval('PumpOnTimer', 0);
+        if ($state === true) {
+            $this->AllOff();
+        }
     }
 
-    // ========================================================================
-    // Helper: get travel time (zone-specific or global)
-    // ========================================================================
-    private function GetZoneTravel(int $zoneIndex): int
+    // -----------------------------
+    // Pump manual
+    // -----------------------------
+    public function Pump(bool $state): void
     {
-        $zones = json_decode($this->ReadPropertyString('ZoneList'), true);
-        if (!isset($zones[$zoneIndex])) return intval($this->ReadPropertyInteger('GlobalTravelTime'));
-        $v = intval($zones[$zoneIndex]['Verfahrzeit'] ?? 0);
-        if ($v <= 0) return intval($this->ReadPropertyInteger('GlobalTravelTime'));
-        return $v;
+        $pumpID = $this->ReadPropertyInteger("PumpID");
+        if ($pumpID > 0 && IPS_InstanceExists($pumpID)) {
+            KNX_WriteDPT1($pumpID, $state);
+        }
     }
 
-    // ========================================================================
-    // Helper: calculate next event timestamp given "HH:MM"
-    // ========================================================================
-    private function CalcNextEventTimestamp(string $timeStr): int
+    // -----------------------------
+    // AllOff
+    // -----------------------------
+    public function AllOff(): void
     {
-        $parts = explode(':', $timeStr);
-        $hour = intval($parts[0] ?? 0);
-        $minute = intval($parts[1] ?? 0);
-        $now = time();
-        $candidate = mktime($hour, $minute, 0);
-        if ($candidate <= $now) $candidate += 86400;
-        return $candidate;
-    }
-
-    // ========================================================================
-    // Read master real state (try KNX children variables or GetValue)
-    // ========================================================================
-    private function ReadMasterState(int $masterID): bool
-    {
-        if ($masterID <= 0 || !IPS_InstanceExists($masterID)) return false;
-        $children = @IPS_GetChildrenIDs($masterID);
-        if (is_array($children)) {
-            foreach ($children as $cid) {
-                if (IPS_VariableExists($cid)) {
-                    return (bool)GetValue($cid);
-                }
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true) ?? [];
+        foreach ($zones as $i => $z) {
+            $ventil = intval($z['Ventil'] ?? 0);
+            if ($ventil > 0 && IPS_InstanceExists($ventil)) {
+                KNX_WriteDPT1($ventil, false);
             }
+            $vid = $this->GetIDForIdent("Zone" . $i);
+            if ($vid !== false) SetValue($vid, false);
         }
-        // fallback
-        if (@IPS_VariableExists($masterID)) {
-            return (bool)GetValue($masterID);
+        $pumpID = $this->ReadPropertyInteger("PumpID");
+        if ($pumpID > 0 && IPS_InstanceExists($pumpID)) {
+            KNX_WriteDPT1($pumpID, false);
+        }
+        $pvid = $this->GetIDForIdent("Pump");
+        if ($pvid !== false) SetValue($pvid, false);
+
+        $this->SetBuffer("ActiveZones", "0");
+        $this->SetBuffer("PumpOnPending", "0");
+        $this->SetTimerInterval("PumpOnTimer", 0);
+
+        // stop any running sequence
+        $this->WriteAttributeString('SequenceState', '');
+        $this->SetTimerInterval("SequenceTimer", 0);
+    }
+
+    // -----------------------------
+    // Core: check parallel-allow rule
+    // returns true if zoneA may run parallel with zoneB
+    // Implementation: allowed if either A lists B or B lists A (can be changed to require both)
+    // -----------------------------
+    private function allowedParallel(int $a, int $b): bool
+    {
+        if ($a === $b) return true;
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true) ?? [];
+        if (!isset($zones[$a]) || !isset($zones[$b])) return false;
+
+        $pa = trim((string)($zones[$a]['ParallelWith'] ?? ''));
+        $pb = trim((string)($zones[$b]['ParallelWith'] ?? ''));
+
+        $alist = array_filter(array_map('trim', explode(',', $pa)), fn($x) => $x !== '');
+        $blist = array_filter(array_map('trim', explode(',', $pb)), fn($x) => $x !== '');
+
+        if (in_array((string)$b, $alist, true) || in_array((string)$a, $blist, true)) {
+            return true;
         }
         return false;
     }
 
-    // ========================================================================
-    // Public wrappers (used in form/action buttons)
-    // ========================================================================
-    public function RunSequence(int $seq) { $this->RunSequence($seq); } // not used directly, kept for compatibility
-    public function IRR_RunSequence(int $id, int $seq) { $this->RunSequence($seq); } // timer-callback compatibility
-    public function IRR_PumpOnTimer(int $id) { $this->PumpOnTimer(); } // timer-callback
-    public function IRR_ZoneStopTimer(int $id, int $zoneIndex) { $this->ZoneStopTimer($zoneIndex); }
-    public function IRR_CloseDelayTimer(int $id, int $zoneIndex) { $this->CloseDelayTimer($zoneIndex); }
-    public function IRR_SwitchZone(int $id, int $zoneIndex, bool $state) { $this->IRR_SwitchZone_Internal($zoneIndex, $state); }
-    // Note: To avoid double prefix confusion the module methods are internal; wrapper names above match the IRR_... callbacks expected by the system.
-
-    // internal implementation used by wrapper
-    public function IRR_SwitchZone_Internal(int $zoneIndex, bool $state): bool
+    // -----------------------------
+    // SwitchZone (manual or called by sequence)
+    // - respects Master
+    // - enforces MaxParallelZones and allowedParallel rules
+    // - opens valve immediately; if first active: schedule pump on after travel time
+    // - closes valve immediately; if last active: stop pump
+    // -----------------------------
+    public function SwitchZone(int $zoneIndex, bool $state): bool
     {
-        return $this->IRR_SwitchZone($zoneIndex, $state);
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true) ?? [];
+        if (!isset($zones[$zoneIndex])) {
+            IPS_LogMessage('IrrigationControl', "SwitchZone: invalid index $zoneIndex");
+            return false;
+        }
+
+        // Master read
+        $masterID = $this->ReadPropertyInteger("MasterID");
+        if ($this->ReadMasterState($masterID) === true) {
+            IPS_LogMessage('IrrigationControl', "SwitchZone: blocked by Master (zone $zoneIndex)");
+            return false;
+        }
+
+        $zone = $zones[$zoneIndex];
+        $ventil = intval($zone['Ventil'] ?? 0);
+        $pumpID = $this->ReadPropertyInteger('PumpID');
+        $maxParallel = max(1, (int)$this->ReadPropertyInteger('MaxParallelZones'));
+
+        if ($ventil <= 0 || !IPS_InstanceExists($ventil)) {
+            IPS_LogMessage('IrrigationControl', "SwitchZone: invalid ventil for zone $zoneIndex");
+            return false;
+        }
+        if ($pumpID <= 0 || !IPS_InstanceExists($pumpID)) {
+            IPS_LogMessage('IrrigationControl', "SwitchZone: invalid pump instance");
+            return false;
+        }
+
+        $active = intval($this->GetBuffer("ActiveZones"));
+
+        if ($state === true) {
+            // check how many active and which active
+            $zonesList = $zones;
+            $activeIndices = [];
+            foreach ($zonesList as $i => $z) {
+                $ident = $this->GetIDForIdent("Zone" . $i);
+                if ($ident !== false && GetValue($ident) === true) $activeIndices[] = $i;
+            }
+
+            // if opening would exceed MaxParallel -> reject
+            if (count($activeIndices) >= $maxParallel) {
+                IPS_LogMessage('IrrigationControl', "SwitchZone: cannot open zone $zoneIndex — maxParallel reached");
+                return false;
+            }
+
+            // check pairwise allowed: for each currently active j, ensure allowedParallel(j, zoneIndex) is true
+            foreach ($activeIndices as $j) {
+                if (!$this->allowedParallel($j, $zoneIndex)) {
+                    IPS_LogMessage('IrrigationControl', "SwitchZone: zone $zoneIndex not allowed parallel with active zone $j");
+                    return false;
+                }
+            }
+
+            // ok -> open valve immediately
+            KNX_WriteDPT1($ventil, true);
+
+            // mark zone status variable (webfront) will be set by caller/RequestAction; but ensure variable exists
+            if ($this->GetIDForIdent("Zone".$zoneIndex) !== false) {
+                // don't overwrite here; RequestAction will set visible state.
+            }
+
+            // inc active
+            $active++;
+            $this->SetBuffer("ActiveZones", strval($active));
+
+            // if first active -> schedule pump on after travel time (zone-specific fallback to global)
+            if ($active === 1) {
+                $travel = intval($zone['Verfahrzeit'] ?? $this->ReadPropertyInteger('GlobalTravelTime'));
+                if ($travel < 0) $travel = 0;
+                $this->SetBuffer("PumpOnPending", "1");
+                $this->SetTimerInterval("PumpOnTimer", $travel * 1000);
+            }
+
+            return true;
+        } else {
+            // close valve now
+            KNX_WriteDPT1($ventil, false);
+
+            // dec active
+            $active--;
+            if ($active < 0) $active = 0;
+            $this->SetBuffer("ActiveZones", strval($active));
+
+            // if no active zones left -> stop pump
+            if ($active === 0) {
+                KNX_WriteDPT1($pumpID, false);
+                if ($this->GetIDForIdent("Pump") !== false) SetValue($this->GetIDForIdent("Pump"), false);
+                $this->SetBuffer("PumpOnPending", "0");
+                $this->SetTimerInterval("PumpOnTimer", 0);
+            }
+            return true;
+        }
     }
 
-    // direct public method used internally and by RequestAction
-    public function IRR_SwitchZone(int $zoneIndex, bool $state): bool
+    // -----------------------------
+    // PumpOnTimer: called after travel delay -> switch pump on
+    // -----------------------------
+    public function PumpOnTimer(): void
     {
-        // keep compatibility with RequestAction (when called as module method)
-        return $this->IRR_SwitchZone_Internal($zoneIndex, $state);
+        if ($this->GetBuffer("PumpOnPending") === "1") {
+            $pumpID = $this->ReadPropertyInteger("PumpID");
+            if ($pumpID > 0 && IPS_InstanceExists($pumpID)) {
+                KNX_WriteDPT1($pumpID, true);
+                if ($this->GetIDForIdent("Pump") !== false) SetValue($this->GetIDForIdent("Pump"), true);
+            }
+        }
+        $this->SetBuffer("PumpOnPending", "0");
+        $this->SetTimerInterval("PumpOnTimer", 0);
+    }
+
+    // -----------------------------
+    // Sequence: RunSequence(seqNumber)
+    // non-blocking: sets SequenceState attribute and starts SequenceTimer to step through
+    // SequenceState structure JSON:
+    // { "seq":1, "order":[0,1,2], "step":0, "phase":"open_next"|"wait_runtime"|"closing", "runtime_end":timestamp, "pending_close": index }
+    // -----------------------------
+    public function RunSequence(int $seqNumber): void
+    {
+        // don't start if master active
+        $masterID = $this->ReadPropertyInteger("MasterID");
+        if ($this->ReadMasterState($masterID) === true) {
+            IPS_LogMessage('IrrigationControl', "RunSequence: blocked by Master");
+            return;
+        }
+
+        // get sequence order & runtimes
+        $keyOrder = "Sequence{$seqNumber}Order";
+        $keyEnabled = "Sequence{$seqNumber}Enabled";
+        $keyStart = "Sequence{$seqNumber}Start";
+        $orderStr = $this->ReadPropertyString($keyOrder);
+        $enabled = (bool)$this->ReadPropertyBoolean($keyEnabled);
+        $startTime = $this->ReadPropertyString($keyStart);
+
+        // if disabled, don't run
+        if (!$enabled && trim($orderStr)==='') {
+            IPS_LogMessage('IrrigationControl', "RunSequence: sequence $seqNumber not enabled or no order");
+            return;
+        }
+
+        // parse order string (comma separated indices)
+        $items = array_values(array_filter(array_map('trim', explode(',', $orderStr)), fn($x) => $x !== ''));
+        $order = array_map('intval', $items);
+
+        if (count($order) === 0) {
+            IPS_LogMessage('IrrigationControl', "RunSequence: empty order for $seqNumber");
+            return;
+        }
+
+        // Build runtimes for this sequence from ZoneList
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true) ?? [];
+        $runtimes = [];
+        foreach ($order as $zi) {
+            $zone = $zones[$zi] ?? [];
+            $rtmin = intval($zone['RuntimeSeq'.$seqNumber] ?? 0);
+            if ($rtmin <= 0) $rtmin = 1;
+            $runtimes[] = $rtmin * 60; // convert to seconds
+        }
+
+        // Initialize SequenceState
+        $state = [
+            'seq' => $seqNumber,
+            'order' => $order,
+            'step' => 0,
+            'phase' => 'open_next',
+            'runtimes' => $runtimes,
+            'runtime_end' => 0,
+            'pending_close' => null
+        ];
+        $this->WriteAttributeString('SequenceState', json_encode($state));
+        // start tick timer every 1s
+        $this->SetTimerInterval("SequenceTimer", 1000);
+        IPS_LogMessage('IrrigationControl', "RunSequence: started seq $seqNumber");
+    }
+
+    // -----------------------------
+    // SequenceTick: called every second to advance sequence
+    // -----------------------------
+    public function SequenceTick(): void
+    {
+        $raw = $this->ReadAttributeString('SequenceState');
+        if (empty($raw)) {
+            $this->SetTimerInterval("SequenceTimer", 0);
+            return;
+        }
+        $state = json_decode($raw, true);
+        if (!is_array($state)) {
+            $this->SetTimerInterval("SequenceTimer", 0);
+            return;
+        }
+
+        $order = $state['order'];
+        $step = intval($state['step']);
+        $phase = $state['phase'];
+        $now = time();
+
+        // if sequence finished
+        if ($step >= count($order)) {
+            IPS_LogMessage('IrrigationControl', "SequenceTick: finished seq {$state['seq']}");
+            // reset
+            $this->WriteAttributeString('SequenceState', '');
+            $this->SetTimerInterval("SequenceTimer", 0);
+            return;
+        }
+
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true) ?? [];
+
+        if ($phase === 'open_next') {
+            // Open the next zone (index = order[step])
+            $zi = intval($order[$step]);
+            // If zone not enabled skip
+            if (!isset($zones[$zi]) || empty($zones[$zi]['Enabled'])) {
+                $state['step']++;
+                $this->WriteAttributeString('SequenceState', json_encode($state));
+                return;
+            }
+            // Try to open using SwitchZone (will check parallels)
+            $ok = $this->SwitchZone($zi, true);
+            if (!$ok) {
+                // cannot open -> abort sequence
+                IPS_LogMessage('IrrigationControl', "SequenceTick: cannot open zone $zi, aborting sequence.");
+                $this->WriteAttributeString('SequenceState', '');
+                $this->SetTimerInterval("SequenceTimer", 0);
+                return;
+            }
+            // schedule runtime end = now + runtime_seconds[step]
+            $runtimeSeconds = intval($state['runtimes'][$step] ?? 60);
+            $state['runtime_end'] = $now + $runtimeSeconds;
+            // set next phase wait_runtime
+            $state['phase'] = 'wait_runtime';
+            $this->WriteAttributeString('SequenceState', json_encode($state));
+            return;
+        }
+
+        if ($phase === 'wait_runtime') {
+            // wait until runtime_end reached
+            if ($now >= intval($state['runtime_end'])) {
+                // prepare to close the zone (but must close only after next is open OR if no next)
+                $state['phase'] = 'closing';
+                $this->WriteAttributeString('SequenceState', json_encode($state));
+            }
+            return;
+        }
+
+        if ($phase === 'closing') {
+            // close current step zone, but open next first (if exists)
+            $curIndex = intval($order[$step]);
+            $nextStep = $step + 1;
+            if ($nextStep < count($order)) {
+                $nextIndex = intval($order[$nextStep]);
+                // attempt to open next
+                $ok = $this->SwitchZone($nextIndex, true);
+                if (!$ok) {
+                    // cannot open next -> close current and abort sequence gracefully
+                    $this->SwitchZone($curIndex, false);
+                    IPS_LogMessage('IrrigationControl', "SequenceTick: could not open next zone $nextIndex; closing current and aborting.");
+                    $this->WriteAttributeString('SequenceState', '');
+                    $this->SetTimerInterval("SequenceTimer", 0);
+                    return;
+                }
+                // wait travel time of NEXT to ensure open -> then close CURRENT
+                $travel = intval($zones[$nextIndex]['Verfahrzeit'] ?? $this->ReadPropertyInteger('GlobalTravelTime'));
+                $delay = max(0, $travel);
+                // set a small state that we'll close current after delay
+                $state['phase'] = 'delayed_close';
+                $state['delayed_close_at'] = $now + $delay;
+                $state['pending_close'] = $curIndex;
+                $this->WriteAttributeString('SequenceState', json_encode($state));
+                return;
+            } else {
+                // no next -> just close current and finish step
+                $this->SwitchZone($curIndex, false);
+                $state['step']++;
+                $state['phase'] = 'open_next';
+                $this->WriteAttributeString('SequenceState', json_encode($state));
+                return;
+            }
+        }
+
+        if ($phase === 'delayed_close') {
+            $at = intval($state['delayed_close_at'] ?? 0);
+            if ($now >= $at) {
+                $toClose = intval($state['pending_close']);
+                $this->SwitchZone($toClose, false);
+                // advance to next step (we already opened the next)
+                $state['step']++;
+                $state['phase'] = 'open_next';
+                $state['pending_close'] = null;
+                unset($state['delayed_close_at']);
+                $this->WriteAttributeString('SequenceState', json_encode($state));
+                return;
+            }
+            return;
+        }
+    }
+
+    // -----------------------------
+    // GetZones
+    // -----------------------------
+    public function GetZones(): array
+    {
+        $zones = json_decode($this->ReadPropertyString("ZoneList"), true) ?? [];
+        $res = [];
+        foreach ($zones as $i => $z) {
+            $res[] = [
+                'Index' => $i,
+                'Name' => ($z['Name'] ?? "Zone " . ($i+1)),
+                'Enabled' => (bool)($z['Enabled'] ?? false),
+                'State' => ($this->GetIDForIdent("Zone".$i) !== false) ? GetValue($this->GetIDForIdent("Zone".$i)) : false,
+                'Ventil' => intval($z['Ventil'] ?? 0)
+            ];
+        }
+        return $res;
+    }
+
+    // -----------------------------
+    // Helper: read master state best-effort
+    // -----------------------------
+    private function ReadMasterState(int $masterID): bool
+    {
+        if ($masterID <= 0 || !IPS_InstanceExists($masterID)) return false;
+
+        // try to read status variable child (common pattern for KNX)
+        $children = @IPS_GetChildrenIDs($masterID);
+        if (is_array($children)) {
+            foreach ($children as $cid) {
+                if (@IPS_VariableExists($cid)) {
+                    return (bool)GetValue($cid);
+                }
+            }
+        }
+
+        // fallback: KNX_RequestStatus if available (may be async)
+        if (function_exists('KNX_RequestStatus')) {
+            $res = @KNX_RequestStatus($masterID);
+            if (is_bool($res)) return $res;
+        }
+
+        // last fallback: try to read as variable directly
+        if (@IPS_VariableExists($masterID)) {
+            return (bool)GetValue($masterID);
+        }
+
+        return false;
     }
 }
