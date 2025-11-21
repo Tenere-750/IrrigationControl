@@ -84,7 +84,17 @@ class IrrigationControl extends IPSModule
             $this->EnableAction($ident);
         }
 
-        // Sequence end display variables (read-only)
+        
+        // Sequence start variables for WebFront
+        if (@IPS_GetObjectIDByIdent("Sequence1StartWF", $this->InstanceID) === false) {
+            $this->RegisterVariableString("Sequence1StartWF", "Seq1 Startzeit", "");
+        }
+        $this->EnableAction("Sequence1StartWF");
+        if (@IPS_GetObjectIDByIdent("Sequence2StartWF", $this->InstanceID) === false) {
+            $this->RegisterVariableString("Sequence2StartWF", "Seq2 Startzeit", "");
+        }
+        $this->EnableAction("Sequence2StartWF");
+// Sequence end display variables (read-only)
         if (@IPS_GetObjectIDByIdent("Sequence1End", $this->InstanceID) === false) {
             $this->RegisterVariableString("Sequence1End", "Sequence1 End", "");
         }
@@ -98,6 +108,18 @@ class IrrigationControl extends IPSModule
     // -----------------------
     public function RequestAction($Ident, $Value)
     {
+        
+        if ($Ident === "Sequence1StartWF") {
+            SetValue($this->GetIDForIdent("Sequence1StartWF"), $Value);
+            $this->UpdateSequenceEndLabels();
+            return;
+        }
+        if ($Ident === "Sequence2StartWF") {
+            SetValue($this->GetIDForIdent("Sequence2StartWF"), $Value);
+            $this->UpdateSequenceEndLabels();
+            return;
+        }
+
         if ($Ident === "Master") {
             $this->Master((bool)$Value);
             // refresh shown state from KNX variable if available
@@ -491,7 +513,7 @@ class IrrigationControl extends IPSModule
     // calculate end time string for a given sequence based on today's zones & runtimes & travel times
     private function CalculateSequenceEndTime(int $seqNumber): string
     {
-        $start = $this->ReadPropertyString("Sequence" . $seqNumber . "Start");
+        $start = $this->GetValue($this->GetIDForIdent("Sequence{$ = seqNumber}StartWF"));
         if (empty($start)) return "";
         $orderStr = $this->ReadPropertyString("Sequence" . $seqNumber . "Order");
         $items = array_values(array_filter(array_map('trim', explode(',', $orderStr)), fn($x) => $x !== ''));
