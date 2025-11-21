@@ -35,18 +35,20 @@
     },
 
     {
-      "type": "ExpansionPanel",
-      "caption": "Sequenzen",
-      "items": [
-        { "name": "Sequence1Enabled", "type": "CheckBox", "caption": "Sequenz 1 aktiv", "add": true },
-        { "name": "Sequence1Start", "type": "SelectTime", "caption": "Startzeit Sequenz 1", "add": "06:00" },
-        { "name": "Sequence1Order", "type": "ValidationTextBox", "caption": "Reihenfolge (z.B. 0,1,2)", "add": "" },
-        { "type": "Divider" },
-        { "name": "Sequence2Enabled", "type": "CheckBox", "caption": "Sequenz 2 aktiv", "add": true },
-        { "name": "Sequence2Start", "type": "SelectTime", "caption": "Startzeit Sequenz 2", "add": "20:00" },
-        { "name": "Sequence2Order", "type": "ValidationTextBox", "caption": "Reihenfolge (z.B. 3,4,5)", "add": "" }
-      ]
-    }
+    "type": "ExpansionPanel",
+    "caption": "Sequenzen",
+    "items": [
+      { "name": "Sequence1Enabled", "type": "CheckBox", "caption": "Sequenz 1 aktiv", "add": true },
+      { "name": "Sequence1Start", "type": "SelectTime", "caption": "Startzeit Sequenz 1", "add": "06:00" },
+      { "name": "Sequence1Order", "type": "ValidationTextBox", "caption": "Reihenfolge (z.B. 0,1,2)", "add": "" },
+
+      { "type": "Label", "caption": " " },
+
+      { "name": "Sequence2Enabled", "type": "CheckBox", "caption": "Sequenz 2 aktiv", "add": true },
+      { "name": "Sequence2Start", "type": "SelectTime", "caption": "Startzeit Sequenz 2", "add": "20:00" },
+      { "name": "Sequence2Order", "type": "ValidationTextBox", "caption": "Reihenfolge (z.B. 3,4,5)", "add": "" }
+    ]
+  }
   ],
 
   "actions": [
