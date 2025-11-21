@@ -14,6 +14,13 @@ class IrrigationControl extends IPSModule
         $this->RegisterPropertyInteger("MaxParallelZones", 2);
         $this->RegisterPropertyString("ZoneList", "[]");
 
+        $this->RegisterPropertyString("Sequence1Start", "06:00");
+        $this->RegisterPropertyString("Sequence2Start", "20:00");
+        $this->RegisterPropertyBoolean("Sequence1Enabled", false);
+        $this->RegisterPropertyBoolean("Sequence2Enabled", false);
+        $this->RegisterPropertyString("Sequence1Order", "");
+        $this->RegisterPropertyString("Sequence2Order", "");
+
         // Timers: pump delay and sequence tick
         $this->RegisterTimer("PumpOnTimer", 0, 'IRR_PumpOnTimer($_IPS[\'TARGET\']);');
         $this->RegisterTimer("SequenceTick", 0, 'IRR_SequenceTick($_IPS[\'TARGET\']);');
