@@ -1,13 +1,10 @@
 {
   "elements": [
     { "type": "Label", "caption": "Irrigation Control - Einstellungen (Modell B: Parallelitäten & Sequenzen)" },
-
     { "name": "MasterID", "type": "SelectInstance", "caption": "Master KNX Instanz (DPT1)", "validParentTypes": [0] },
     { "name": "PumpID", "type": "SelectInstance", "caption": "Pumpen KNX Instanz (DPT1)", "validParentTypes": [0] },
-
     { "name": "GlobalTravelTime", "type": "NumberSpinner", "suffix": "Sekunden", "caption": "Globale Verfahrzeit (Sek)", "add": 7 },
     { "name": "MaxParallelZones", "type": "NumberSpinner", "caption": "Max. parallele Zonen", "minimum": 1, "maximum": 7, "add": 2 },
-
     {
       "type": "ExpansionPanel",
       "caption": "Zonen (Pro Zone: Schedule-Type, Verfahrzeit, Laufzeiten Seq1/Seq2)",
@@ -34,7 +31,6 @@
         }
       ]
     },
-
     {
       "type": "ExpansionPanel",
       "caption": "Sequenzen (Morgen / Abend)",
@@ -43,29 +39,23 @@
         { "name": "Sequence1Start", "type": "SelectTime", "caption": "Startzeit Sequenz 1", "add": "06:00" },
         { "name": "Sequence1Order", "type": "ValidationTextBox", "caption": "Reihenfolge (z.B. 0,1,2)", "add": "" },
         { "name": "Sequence1End", "type": "Label", "caption": "Endzeit Sequenz 1 (automatisch berechnet)" },
-
         { "type": "Label", "caption": "──────────" },
-
         { "name": "Sequence2Enabled", "type": "CheckBox", "caption": "Sequenz 2 aktiv", "add": true },
         { "name": "Sequence2Start", "type": "SelectTime", "caption": "Startzeit Sequenz 2", "add": "20:00" },
         { "name": "Sequence2Order", "type": "ValidationTextBox", "caption": "Reihenfolge (z.B. 3,4,5)", "add": "" },
         { "name": "Sequence2End", "type": "Label", "caption": "Endzeit Sequenz 2 (automatisch berechnet)" }
       ]
     }
-
   ],
-
   "actions": [
     { "type": "Label", "caption": "Manuelle Steuerung" },
     { "type": "Button", "caption": "Master AN", "onClick": "IRR_Master($id, true);" },
     { "type": "Button", "caption": "Master AUS", "onClick": "IRR_Master($id, false);" },
     { "type": "Button", "caption": "Pumpe AN", "onClick": "IRR_Pump($id, true);" },
     { "type": "Button", "caption": "Pumpe AUS", "onClick": "IRR_Pump($id, false);" },
-
     { "type": "Label", "caption": "Sequenzen" },
     { "type": "Button", "caption": "Sequenz 1 jetzt starten", "onClick": "IRR_RunSequence($id, 1);" },
     { "type": "Button", "caption": "Sequenz 2 jetzt starten", "onClick": "IRR_RunSequence($id, 2);" }
   ],
-
   "status": []
 }
