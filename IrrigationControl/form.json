@@ -44,7 +44,7 @@
         { "name": "Sequence1Order", "type": "ValidationTextBox", "caption": "Reihenfolge (z.B. 0,1,2)", "add": "" },
         { "name": "Sequence1End", "type": "Label", "caption": "Endzeit Sequenz 1 (automatisch berechnet)" },
 
-        { "type": "Divider" },
+        { "type": "Label", "caption": "──────────" },
 
         { "name": "Sequence2Enabled", "type": "CheckBox", "caption": "Sequenz 2 aktiv", "add": true },
         { "name": "Sequence2Start", "type": "SelectTime", "caption": "Startzeit Sequenz 2", "add": "20:00" },
@@ -52,6 +52,7 @@
         { "name": "Sequence2End", "type": "Label", "caption": "Endzeit Sequenz 2 (automatisch berechnet)" }
       ]
     }
+
   ],
 
   "actions": [
