@@ -1,0 +1,14 @@
+{
+  "id": "{ABFC2B4E-F7E4-4366-A38B-79E7947AD335}",
+  "name": "Bewaesserungssteuerung",
+  "type": 3,
+  "vendor": "Codex",
+  "aliases": [
+    "Bewässerungssteuerung"
+  ],
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "BWS",
+  "url": ""
+}

@@ -1,0 +1,242 @@
+{
+  "elements": [
+    {
+      "type": "Label",
+      "caption": "Bewässerungssteuerung für 7 Zonen. Startzeiten und Tagesauswahl können zusätzlich im WebFront bedient werden."
+    },
+    {
+      "type": "CheckBox",
+      "name": "MasterEnabled",
+      "caption": "Master-Switch aktiv"
+    },
+    {
+      "type": "CheckBox",
+      "name": "AutomaticEnabled",
+      "caption": "Automatik aktiv"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "DefaultValveTravelTime",
+      "caption": "Standard-Verfahrzeit der Motorkugelhähne",
+      "suffix": " Sekunden",
+      "minimum": 1,
+      "maximum": 120
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "ValveOverlapTime",
+      "caption": "Überlappung in Sequenzen",
+      "suffix": " Sekunden",
+      "minimum": 0,
+      "maximum": 120
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "MorningStartTime",
+      "caption": "Startzeit morgens (HH:MM)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "EveningStartTime",
+      "caption": "Startzeit abends (HH:MM)"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MorningDuration",
+      "caption": "Standard-Laufzeit pro Kreis morgens",
+      "suffix": " Minuten",
+      "minimum": 1,
+      "maximum": 240
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "EveningDuration",
+      "caption": "Standard-Laufzeit pro Kreis abends",
+      "suffix": " Minuten",
+      "minimum": 1,
+      "maximum": 240
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "SoilMoistureThreshold",
+      "caption": "Bodenfeuchte-Schwelle zum Überspringen",
+      "suffix": " %",
+      "minimum": 0,
+      "maximum": 100
+    },
+    {
+      "type": "List",
+      "name": "Zones",
+      "caption": "Bewässerungskreise",
+      "rowCount": 7,
+      "add": false,
+      "delete": false,
+      "sort": {
+        "column": "Index",
+        "direction": "ascending"
+      },
+      "columns": [
+        {
+          "caption": "#",
+          "name": "Index",
+          "width": "40px",
+          "add": 1,
+          "edit": {
+            "type": "NumberSpinner",
+            "minimum": 1,
+            "maximum": 7
+          }
+        },
+        {
+          "caption": "Name",
+          "name": "Name",
+          "width": "180px",
+          "add": "Zone"
+        },
+        {
+          "caption": "Aktiv",
+          "name": "Enabled",
+          "width": "80px",
+          "add": true,
+          "edit": {
+            "type": "CheckBox"
+          }
+        },
+        {
+          "caption": "Ventil-ID",
+          "name": "ValveID",
+          "width": "120px",
+          "add": 0
+        },
+        {
+          "caption": "Verfahrzeit (s)",
+          "name": "TravelTime",
+          "width": "120px",
+          "add": 7
+        },
+        {
+          "caption": "Feuchte-ID optional",
+          "name": "SoilMoistureID",
+          "width": "140px",
+          "add": 0
+        },
+        {
+          "caption": "Intervall morgens (Tage)",
+          "name": "MorningInterval",
+          "width": "150px",
+          "add": 1
+        },
+        {
+          "caption": "Intervall abends (Tage)",
+          "name": "EveningInterval",
+          "width": "150px",
+          "add": 1
+        },
+        {
+          "caption": "Reihenfolge morgens",
+          "name": "MorningOrder",
+          "width": "140px",
+          "add": 1
+        },
+        {
+          "caption": "Reihenfolge abends",
+          "name": "EveningOrder",
+          "width": "140px",
+          "add": 1
+        }
+      ],
+      "values": [
+        { "Index": 1, "Name": "Zone 1", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 1, "EveningOrder": 1 },
+        { "Index": 2, "Name": "Zone 2", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 2, "EveningOrder": 2 },
+        { "Index": 3, "Name": "Zone 3", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 3, "EveningOrder": 3 },
+        { "Index": 4, "Name": "Zone 4", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 4, "EveningOrder": 4 },
+        { "Index": 5, "Name": "Zone 5", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 5, "EveningOrder": 5 },
+        { "Index": 6, "Name": "Zone 6", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 6, "EveningOrder": 6 },
+        { "Index": 7, "Name": "Zone 7", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 7, "EveningOrder": 7 }
+      ]
+    },
+    {
+      "type": "List",
+      "name": "DayPlan",
+      "caption": "WebFront-Planer: Kreise pro Wochentag und Startzeit",
+      "rowCount": 7,
+      "add": false,
+      "delete": false,
+      "columns": [
+        {
+          "caption": "Tag (1=Mo ... 7=So)",
+          "name": "Day",
+          "width": "150px",
+          "add": 1
+        },
+        {
+          "caption": "Morgens aktiv",
+          "name": "MorningEnabled",
+          "width": "120px",
+          "add": true,
+          "edit": {
+            "type": "CheckBox"
+          }
+        },
+        {
+          "caption": "Morgens Kreise",
+          "name": "MorningZones",
+          "width": "180px",
+          "add": "1,2,3,4,5,6,7"
+        },
+        {
+          "caption": "Abends aktiv",
+          "name": "EveningEnabled",
+          "width": "120px",
+          "add": true,
+          "edit": {
+            "type": "CheckBox"
+          }
+        },
+        {
+          "caption": "Abends Kreise",
+          "name": "EveningZones",
+          "width": "180px",
+          "add": "1,2,3,4,5,6,7"
+        }
+      ],
+      "values": [
+        { "Day": 1, "MorningEnabled": true, "MorningZones": "1,2,3,4,5,6,7", "EveningEnabled": true, "EveningZones": "1,2,3,4,5,6,7" },
+        { "Day": 2, "MorningEnabled": true, "MorningZones": "1,2,3,4,5,6,7", "EveningEnabled": true, "EveningZones": "1,2,3,4,5,6,7" },
+        { "Day": 3, "MorningEnabled": true, "MorningZones": "1,2,3,4,5,6,7", "EveningEnabled": true, "EveningZones": "1,2,3,4,5,6,7" },
+        { "Day": 4, "MorningEnabled": true, "MorningZones": "1,2,3,4,5,6,7", "EveningEnabled": true, "EveningZones": "1,2,3,4,5,6,7" },
+        { "Day": 5, "MorningEnabled": true, "MorningZones": "1,2,3,4,5,6,7", "EveningEnabled": true, "EveningZones": "1,2,3,4,5,6,7" },
+        { "Day": 6, "MorningEnabled": true, "MorningZones": "1,2,3,4,5,6,7", "EveningEnabled": true, "EveningZones": "1,2,3,4,5,6,7" },
+        { "Day": 7, "MorningEnabled": true, "MorningZones": "1,2,3,4,5,6,7", "EveningEnabled": true, "EveningZones": "1,2,3,4,5,6,7" }
+      ]
+    },
+    {
+      "type": "SelectVariable",
+      "name": "PumpID",
+      "caption": "Pumpen-ID",
+      "validVariableTypes": [0]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Button",
+      "caption": "Sequenz morgens jetzt starten",
+      "onClick": "BWS_StartSequence($id, 'morning');"
+    },
+    {
+      "type": "Button",
+      "caption": "Sequenz abends jetzt starten",
+      "onClick": "BWS_StartSequence($id, 'evening');"
+    },
+    {
+      "type": "Button",
+      "caption": "Alles stoppen",
+      "onClick": "BWS_StopAll($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Tageszähler zurücksetzen",
+      "onClick": "BWS_ResetDailyRuntime($id);"
+    }
+  ]
+}
