@@ -39,7 +39,6 @@ Sequenzwechsel:
 1. nächstes Ventil öffnen
 2. Verfahrzeit des nächsten Ventils warten
 3. vorheriges Ventil schließen
-4. bei Bedarf Restzeit bis zur konfigurierten Überlappung warten
 
 ## Installation in IP-Symcon
 
@@ -57,7 +56,11 @@ Im WebFront stehen unter anderem diese Variablen bereit:
 - `Automatik`
 - `Startzeit morgens`
 - `Startzeit abends`
-- je Zone ein manueller Schalter
+- je Zone ein manueller Schalter; Zone 3 und 4 werden als `Manuell Rasen` zusammengefasst
+- `Rasen Laufzeit morgens`
+- `Rasen Laufzeit abends`
+- `Aktive Kreise`
+- `Aktiver Rasen-Kreis`
 - je Wochentag und Startzeit ein Aktiv-Schalter
 - je Wochentag und Startzeit eine Kreisliste, zum Beispiel `1,3,5`
 - `Planer Übersicht`
@@ -72,7 +75,7 @@ Die Kreisliste wird als kommagetrennte Liste gepflegt. Ungültige Werte werden a
 - Die Pumpen- und Ventil-IDs müssen KNX-Instanzen sein, die DPT1-Schalttelegramme annehmen.
 - Die Steuerung verwendet `KNX_WriteDPT1($InstanceID, true)` und `KNX_WriteDPT1($InstanceID, false)`.
 - Zone 3 (`Rasen rechts`) und Zone 4 (`Rasen links`) werden in automatischen Sequenzen als logische Zone `Rasen` behandelt. Die Laufzeit von Zone 3 ist die Gesamt-Laufzeit fuer `Rasen` und wird automatisch zu gleichen Teilen auf rechts und links aufgeteilt.
-- Beim Umschalten von `Rasen rechts` auf `Rasen links` wird die Pumpe ausgeschaltet, Zone 3 geschlossen, mindestens die konfigurierte Umschaltzeit gewartet und erst danach Zone 4 geoeffnet.
+- Beim Umschalten von `Rasen rechts` auf `Rasen links` bleibt die Pumpe eingeschaltet. Zone 4 wird geoeffnet, ihre Verfahrzeit wird abgewartet und danach wird Zone 3 geschlossen.
 - Bodenfeuchtewerte werden als Prozentwert erwartet. Ist der Sensorwert größer oder gleich der konfigurierten Schwelle, wird die Zone übersprungen.
 - Die Tagesintervalle werden deterministisch anhand des Tageszählers berechnet. Bei Intervall `2` läuft eine Zone jeden zweiten Tag, bei `3` jeden dritten Tag.
 

@@ -40,6 +40,7 @@ class Bewaesserungssteuerung extends IPSModule
         $this->RegisterAttributeString('LastDailyReset', '');
         $this->RegisterAttributeBoolean('VariablesInitialized', false);
         $this->RegisterAttributeString('ManualActiveStarts', '{}');
+        $this->RegisterAttributeString('ActiveZoneIndexes', '[]');
 
         $this->RegisterTimer('ScheduleTimer', 60000, 'BWS_CheckSchedules($_IPS[\'TARGET\']);');
     }
@@ -72,6 +73,20 @@ class Bewaesserungssteuerung extends IPSModule
         if (in_array($Ident, ['MorningStartTime', 'EveningStartTime'], true)) {
             $time = $this->NormalizeTime((string) $Value);
             SetValueString($this->GetIDForIdent($Ident), $time);
+            return;
+        }
+
+        if (in_array($Ident, ['LawnMorningDuration', 'LawnEveningDuration'], true)) {
+            SetValueInteger($this->GetIDForIdent($Ident), max(1, (int) $Value));
+            return;
+        }
+
+        if ($Ident === 'ManualLawn') {
+            if ((bool) $Value) {
+                $this->StartManualZone(self::LAWN_RIGHT_ZONE);
+            } else {
+                $this->StopLawn();
+            }
             return;
         }
 
@@ -219,6 +234,34 @@ class Bewaesserungssteuerung extends IPSModule
         $this->UpdatePlannerHtml();
     }
 
+    public function StopLawn(): void
+    {
+        foreach ([self::LAWN_RIGHT_ZONE, self::LAWN_LEFT_ZONE] as $zoneIndex) {
+            $zone = $this->GetZoneByIndex($zoneIndex);
+            if (!$zone) {
+                continue;
+            }
+
+            $this->AddManualRuntime($zoneIndex);
+            $this->SetValve($zone, false);
+            $manualIdent = 'ManualZone' . $zoneIndex;
+            if ($this->IdentExists($manualIdent)) {
+                SetValueBoolean($this->GetIDForIdent($manualIdent), false);
+            }
+        }
+
+        if ($this->CountActiveManualZones() === 0) {
+            $this->SetPump(false);
+        }
+
+        if ($this->IdentExists('ManualLawn')) {
+            SetValueBoolean($this->GetIDForIdent('ManualLawn'), false);
+        }
+
+        $this->SetStatusText('Rasen gestoppt.');
+        $this->UpdatePlannerHtml();
+    }
+
     public function StopAll(): void
     {
         $this->ResetDailyRuntimeIfNeeded();
@@ -235,6 +278,10 @@ class Bewaesserungssteuerung extends IPSModule
             if ($this->IdentExists($manualIdent)) {
                 SetValueBoolean($this->GetIDForIdent($manualIdent), false);
             }
+        }
+
+        if ($this->IdentExists('ManualLawn')) {
+            SetValueBoolean($this->GetIDForIdent('ManualLawn'), false);
         }
 
         $this->SetStatusText('Alle Zonen gestoppt.');
@@ -294,20 +341,7 @@ class Bewaesserungssteuerung extends IPSModule
             return;
         }
 
-        $this->SetPump(false);
-        $this->SetValve($rightZone, false);
-        $switchWait = max($this->Seconds($rightZone['TravelTime']), $this->ReadPropertyInteger('ValveOverlapTime'));
-        IPS_Sleep($switchWait * 1000);
-
-        if (!$this->GetBool('MasterSwitch')) {
-            $currentZone = null;
-            return;
-        }
-
-        $this->OpenValve($leftZone);
-        IPS_Sleep($this->Seconds($leftZone['TravelTime']) * 1000);
-        $this->SetPump(true);
-        $currentZone = $leftZone;
+        $this->SwitchToZone($currentZone, $leftZone);
         $this->RunIrrigationRuntime($leftDuration);
     }
 
@@ -319,8 +353,7 @@ class Bewaesserungssteuerung extends IPSModule
             $this->SetPump(true);
         } else {
             $this->OpenValve($nextZone);
-            $transitionWait = max($this->Seconds($nextZone['TravelTime']), $this->ReadPropertyInteger('ValveOverlapTime'));
-            IPS_Sleep($transitionWait * 1000);
+            IPS_Sleep($this->Seconds($nextZone['TravelTime']) * 1000);
             $this->SetValve($currentZone, false);
         }
 
@@ -410,7 +443,11 @@ class Bewaesserungssteuerung extends IPSModule
 
     private function SetValve(array $zone, bool $state): void
     {
-        $this->WriteKnxDpt1((int) ($zone['ValveID'] ?? 0), $state);
+        $valveID = (int) ($zone['ValveID'] ?? 0);
+        $this->WriteKnxDpt1($valveID, $state);
+        if ($valveID > 0 || !$state) {
+            $this->SetActiveZone((int) $zone['Index'], $state);
+        }
     }
 
     private function SetPump(bool $state): void
@@ -432,6 +469,86 @@ class Bewaesserungssteuerung extends IPSModule
     {
         SetValueInteger($this->GetIDForIdent('PumpRuntimeToday'), GetValueInteger($this->GetIDForIdent('PumpRuntimeToday')) + $seconds);
         SetValueInteger($this->GetIDForIdent('PumpRuntimeTotal'), GetValueInteger($this->GetIDForIdent('PumpRuntimeTotal')) + $seconds);
+    }
+
+    private function SetActiveZone(int $zoneIndex, bool $state): void
+    {
+        $active = $this->GetActiveZoneIndexes();
+        if ($state && !in_array($zoneIndex, $active, true)) {
+            $active[] = $zoneIndex;
+        } elseif (!$state) {
+            $active = array_values(array_filter($active, static function (int $index) use ($zoneIndex): bool {
+                return $index !== $zoneIndex;
+            }));
+        }
+
+        sort($active);
+        $this->WriteAttributeString('ActiveZoneIndexes', json_encode($active));
+        $this->UpdateActiveZonesText();
+        $this->UpdateLogicalLawnSwitch();
+    }
+
+    private function GetActiveZoneIndexes(): array
+    {
+        $active = json_decode($this->ReadAttributeString('ActiveZoneIndexes'), true);
+        if (!is_array($active)) {
+            return [];
+        }
+
+        $indexes = [];
+        foreach ($active as $index) {
+            $index = (int) $index;
+            if ($index >= 1 && $index <= self::ZONE_COUNT && !in_array($index, $indexes, true)) {
+                $indexes[] = $index;
+            }
+        }
+
+        sort($indexes);
+        return $indexes;
+    }
+
+    private function UpdateActiveZonesText(): void
+    {
+        if (!$this->IdentExists('ActiveZones')) {
+            return;
+        }
+
+        $names = [];
+        foreach ($this->GetActiveZoneIndexes() as $zoneIndex) {
+            $zone = $this->GetZoneByIndex($zoneIndex);
+            if ($zone) {
+                $names[] = (string) $zone['Name'];
+            }
+        }
+
+        SetValueString($this->GetIDForIdent('ActiveZones'), count($names) > 0 ? implode(', ', $names) : 'Keine');
+        if ($this->IdentExists('ActiveLawnSide')) {
+            SetValueString($this->GetIDForIdent('ActiveLawnSide'), $this->GetActiveLawnSideText());
+        }
+    }
+
+    private function GetActiveLawnSideText(): string
+    {
+        $active = $this->GetActiveZoneIndexes();
+        if (in_array(self::LAWN_LEFT_ZONE, $active, true)) {
+            return 'Rasen links';
+        }
+
+        if (in_array(self::LAWN_RIGHT_ZONE, $active, true)) {
+            return 'Rasen rechts';
+        }
+
+        return 'Keiner';
+    }
+
+    private function UpdateLogicalLawnSwitch(): void
+    {
+        if (!$this->IdentExists('ManualLawn')) {
+            return;
+        }
+
+        $active = $this->GetActiveZoneIndexes();
+        SetValueBoolean($this->GetIDForIdent('ManualLawn'), in_array(self::LAWN_RIGHT_ZONE, $active, true) || in_array(self::LAWN_LEFT_ZONE, $active, true));
     }
 
     private function SetManualStart(int $zoneIndex, int $timestamp): void
@@ -501,10 +618,16 @@ class Bewaesserungssteuerung extends IPSModule
         $this->EnableAction('AutomaticMode');
 
         $this->RegisterVariableString('StatusText', 'Status', '', 30);
+        $this->RegisterVariableString('ActiveZones', 'Aktive Kreise', '', 35);
+        $this->RegisterVariableString('ActiveLawnSide', 'Aktiver Rasen-Kreis', '', 36);
         $this->RegisterVariableString('MorningStartTime', 'Startzeit morgens', '', 40);
         $this->EnableAction('MorningStartTime');
         $this->RegisterVariableString('EveningStartTime', 'Startzeit abends', '', 50);
         $this->EnableAction('EveningStartTime');
+        $this->RegisterVariableInteger('LawnMorningDuration', 'Rasen Laufzeit morgens', 'BWS.Minutes', 52);
+        $this->EnableAction('LawnMorningDuration');
+        $this->RegisterVariableInteger('LawnEveningDuration', 'Rasen Laufzeit abends', 'BWS.Minutes', 54);
+        $this->EnableAction('LawnEveningDuration');
 
         $this->RegisterVariableInteger('PumpRuntimeToday', 'Pumpenlaufzeit heute', 'BWS.Duration', 60);
         $this->RegisterVariableInteger('PumpRuntimeTotal', 'Pumpenlaufzeit gesamt', 'BWS.Duration', 70);
@@ -516,8 +639,12 @@ class Bewaesserungssteuerung extends IPSModule
             $name = (string) $zone['Name'];
             $this->RegisterVariableBoolean('ManualZone' . $index, 'Manuell ' . $name, '~Switch', $position++);
             $this->EnableAction('ManualZone' . $index);
+            IPS_SetHidden($this->GetIDForIdent('ManualZone' . $index), in_array($index, [self::LAWN_RIGHT_ZONE, self::LAWN_LEFT_ZONE], true));
             $this->RegisterVariableInteger('ValveCycles' . $index, 'Ventilzyklen ' . $name, '', $position++);
         }
+
+        $this->RegisterVariableBoolean('ManualLawn', 'Manuell Rasen', '~Switch', $position++);
+        $this->EnableAction('ManualLawn');
 
         foreach (self::DAYS as $day => $caption) {
             foreach ([self::SLOT_MORNING => 'Morning', self::SLOT_EVENING => 'Evening'] as $slot => $part) {
@@ -531,7 +658,11 @@ class Bewaesserungssteuerung extends IPSModule
 
     private function SyncInitialPlannerValues(): void
     {
+        $this->EnsureLawnDurationValues();
+
         if ($this->ReadAttributeBoolean('VariablesInitialized')) {
+            $this->UpdateActiveZonesText();
+            $this->UpdateLogicalLawnSwitch();
             $this->UpdatePlannerHtml();
             return;
         }
@@ -562,7 +693,31 @@ class Bewaesserungssteuerung extends IPSModule
         }
 
         $this->WriteAttributeBoolean('VariablesInitialized', true);
+        $this->UpdateActiveZonesText();
+        $this->UpdateLogicalLawnSwitch();
         $this->UpdatePlannerHtml();
+    }
+
+    private function EnsureLawnDurationValues(): void
+    {
+        if (!$this->IdentExists('LawnMorningDuration') || !$this->IdentExists('LawnEveningDuration')) {
+            return;
+        }
+
+        $lawnZone = $this->GetZoneByIndex(self::LAWN_RIGHT_ZONE);
+        if (!$lawnZone) {
+            return;
+        }
+
+        $morningID = $this->GetIDForIdent('LawnMorningDuration');
+        if (GetValueInteger($morningID) <= 0) {
+            SetValueInteger($morningID, max(1, (int) ($lawnZone['MorningDuration'] ?? 10)));
+        }
+
+        $eveningID = $this->GetIDForIdent('LawnEveningDuration');
+        if (GetValueInteger($eveningID) <= 0) {
+            SetValueInteger($eveningID, max(1, (int) ($lawnZone['EveningDuration'] ?? 10)));
+        }
     }
 
     private function UpdatePlannerHtml(): void
@@ -573,7 +728,7 @@ class Bewaesserungssteuerung extends IPSModule
 
         $rows = '';
         foreach (self::DAYS as $day => $caption) {
-            $rows .= '<tr><td>' . $caption . '</td><td>' . $this->OnOff($this->GetDaySlotEnabled($day, self::SLOT_MORNING)) . '</td><td>' . htmlspecialchars(implode(', ', $this->GetDaySlotZones($day, self::SLOT_MORNING))) . '</td><td>' . $this->OnOff($this->GetDaySlotEnabled($day, self::SLOT_EVENING)) . '</td><td>' . htmlspecialchars(implode(', ', $this->GetDaySlotZones($day, self::SLOT_EVENING))) . '</td></tr>';
+            $rows .= '<tr><td>' . $caption . '</td><td>' . $this->OnOff($this->GetDaySlotEnabled($day, self::SLOT_MORNING)) . '</td><td>' . htmlspecialchars($this->FormatZoneList($this->GetDaySlotZones($day, self::SLOT_MORNING))) . '</td><td>' . $this->OnOff($this->GetDaySlotEnabled($day, self::SLOT_EVENING)) . '</td><td>' . htmlspecialchars($this->FormatZoneList($this->GetDaySlotZones($day, self::SLOT_EVENING))) . '</td></tr>';
         }
 
         $html = '<style>table.bws{border-collapse:collapse;width:100%}.bws th,.bws td{border:1px solid #ddd;padding:6px;text-align:left}.bws th{background:#f4f4f4}.bws .on{color:#167a2f;font-weight:bold}.bws .off{color:#9b1c1c;font-weight:bold}</style>';
@@ -586,6 +741,11 @@ class Bewaesserungssteuerung extends IPSModule
         if (!IPS_VariableProfileExists('BWS.Duration')) {
             IPS_CreateVariableProfile('BWS.Duration', 1);
             IPS_SetVariableProfileText('BWS.Duration', '', ' s');
+        }
+
+        if (!IPS_VariableProfileExists('BWS.Minutes')) {
+            IPS_CreateVariableProfile('BWS.Minutes', 1);
+            IPS_SetVariableProfileText('BWS.Minutes', '', ' min');
         }
     }
 
@@ -703,6 +863,10 @@ class Bewaesserungssteuerung extends IPSModule
 
     private function GetZoneDurationSeconds(array $zone, string $slot): int
     {
+        if ((int) ($zone['Index'] ?? 0) === self::LAWN_RIGHT_ZONE) {
+            return $this->GetLawnDurationSeconds($slot);
+        }
+
         $durationKey = $slot === self::SLOT_MORNING ? 'MorningDuration' : 'EveningDuration';
         $minutes = (int) ($zone[$durationKey] ?? 0);
         if ($minutes <= 0) {
@@ -710,6 +874,22 @@ class Bewaesserungssteuerung extends IPSModule
         }
 
         return $minutes * 60;
+    }
+
+    private function GetLawnDurationSeconds(string $slot): int
+    {
+        $ident = $slot === self::SLOT_MORNING ? 'LawnMorningDuration' : 'LawnEveningDuration';
+        if ($this->IdentExists($ident)) {
+            return max(1, GetValueInteger($this->GetIDForIdent($ident))) * 60;
+        }
+
+        $lawnZone = $this->GetZoneByIndex(self::LAWN_RIGHT_ZONE);
+        if ($lawnZone) {
+            $durationKey = $slot === self::SLOT_MORNING ? 'MorningDuration' : 'EveningDuration';
+            return max(1, (int) ($lawnZone[$durationKey] ?? 10)) * 60;
+        }
+
+        return $this->GetSlotDurationSeconds($slot);
     }
 
     private function GetDaySlotEnabled(int $day, string $slot): bool
@@ -743,6 +923,23 @@ class Bewaesserungssteuerung extends IPSModule
     private function NormalizeZoneList(string $value): string
     {
         return implode(',', $this->ParseZoneList($value));
+    }
+
+    private function FormatZoneList(array $zones): string
+    {
+        $labels = [];
+        foreach ($zones as $zoneIndex) {
+            if (in_array($zoneIndex, [self::LAWN_RIGHT_ZONE, self::LAWN_LEFT_ZONE], true)) {
+                if (!in_array('Rasen', $labels, true)) {
+                    $labels[] = 'Rasen';
+                }
+                continue;
+            }
+
+            $labels[] = (string) $zoneIndex;
+        }
+
+        return implode(', ', $labels);
     }
 
     private function ParseZoneList(string $value): array
