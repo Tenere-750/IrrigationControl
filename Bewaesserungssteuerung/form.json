@@ -23,14 +23,6 @@
       "maximum": 120
     },
     {
-      "type": "NumberSpinner",
-      "name": "ValveOverlapTime",
-      "caption": "Überlappung in Sequenzen",
-      "suffix": " Sekunden",
-      "minimum": 0,
-      "maximum": 120
-    },
-    {
       "type": "ValidationTextBox",
       "name": "MorningStartTime",
       "caption": "Startzeit morgens (HH:MM)"
@@ -67,7 +59,7 @@
     {
       "type": "List",
       "name": "Zones",
-      "caption": "Bewässerungskreise",
+      "caption": "Ventile und Kreisnamen (Rasen rechts/links fest)",
       "rowCount": 7,
       "add": false,
       "delete": false,
@@ -118,18 +110,6 @@
           "add": 7
         },
         {
-          "caption": "Laufzeit morgens (min)",
-          "name": "MorningDuration",
-          "width": "150px",
-          "add": 10
-        },
-        {
-          "caption": "Laufzeit abends (min)",
-          "name": "EveningDuration",
-          "width": "150px",
-          "add": 10
-        },
-        {
           "caption": "Feuchte-ID optional",
           "name": "SoilMoistureID",
           "width": "140px",
@@ -168,6 +148,48 @@
         { "Index": 5, "Name": "Zone 5", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 5, "EveningOrder": 5 },
         { "Index": 6, "Name": "Zone 6", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 6, "EveningOrder": 6 },
         { "Index": 7, "Name": "Zone 7", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 7, "EveningOrder": 7 }
+      ]
+    },
+    {
+      "type": "List",
+      "name": "ZoneDurations",
+      "caption": "Laufzeiten der logischen Kreise",
+      "rowCount": 6,
+      "add": false,
+      "delete": false,
+      "columns": [
+        {
+          "caption": "Schlüssel",
+          "name": "Key",
+          "width": "80px",
+          "add": "1"
+        },
+        {
+          "caption": "Kreis",
+          "name": "Name",
+          "width": "180px",
+          "add": "Zone"
+        },
+        {
+          "caption": "Laufzeit morgens (min)",
+          "name": "MorningDuration",
+          "width": "160px",
+          "add": 10
+        },
+        {
+          "caption": "Laufzeit abends (min)",
+          "name": "EveningDuration",
+          "width": "160px",
+          "add": 10
+        }
+      ],
+      "values": [
+        { "Key": "1", "Name": "Zone 1", "MorningDuration": 10, "EveningDuration": 10 },
+        { "Key": "2", "Name": "Zone 2", "MorningDuration": 10, "EveningDuration": 10 },
+        { "Key": "lawn", "Name": "Rasen", "MorningDuration": 10, "EveningDuration": 10 },
+        { "Key": "5", "Name": "Zone 5", "MorningDuration": 10, "EveningDuration": 10 },
+        { "Key": "6", "Name": "Zone 6", "MorningDuration": 10, "EveningDuration": 10 },
+        { "Key": "7", "Name": "Zone 7", "MorningDuration": 10, "EveningDuration": 10 }
       ]
     },
     {
@@ -229,6 +251,12 @@
       "type": "SelectInstance",
       "name": "PumpID",
       "caption": "Pumpen KNX-Instanz-ID"
+    },
+    {
+      "type": "SelectVariable",
+      "name": "FlowSensorID",
+      "caption": "Durchfluss-Variable (l/min)",
+      "validVariableTypes": [2]
     }
   ],
   "actions": [

@@ -59,8 +59,10 @@ Im WebFront stehen unter anderem diese Variablen bereit:
 - je Zone ein manueller Schalter; Zone 3 und 4 werden als `Manuell Rasen` zusammengefasst
 - `Rasen Laufzeit morgens`
 - `Rasen Laufzeit abends`
-- `Aktive Kreise`
-- `Aktiver Rasen-Kreis`
+- `Aktive Kreise` inklusive Restlaufzeit je aktivem Kreis und aktivem Rasenkreis
+- `Restlaufzeit Sequenz`
+- `Wassermenge heute`
+- `Wassermenge gesamt`
 - je Wochentag und Startzeit ein Aktiv-Schalter
 - je Wochentag und Startzeit eine Kreisliste, zum Beispiel `1,3,5`
 - `Planer Übersicht`
@@ -74,8 +76,10 @@ Die Kreisliste wird als kommagetrennte Liste gepflegt. Ungültige Werte werden a
 
 - Die Pumpen- und Ventil-IDs müssen KNX-Instanzen sein, die DPT1-Schalttelegramme annehmen.
 - Die Steuerung verwendet `KNX_WriteDPT1($InstanceID, true)` und `KNX_WriteDPT1($InstanceID, false)`.
-- Zone 3 (`Rasen rechts`) und Zone 4 (`Rasen links`) werden in automatischen Sequenzen als logische Zone `Rasen` behandelt. Die Laufzeit von Zone 3 ist die Gesamt-Laufzeit fuer `Rasen` und wird automatisch zu gleichen Teilen auf rechts und links aufgeteilt.
+- Zone 3 (`Rasen rechts`) und Zone 4 (`Rasen links`) werden in automatischen Sequenzen als logische Zone `Rasen` behandelt. Die konfigurierte Laufzeit von `Rasen` wird automatisch zu gleichen Teilen auf rechts und links aufgeteilt.
 - Beim Umschalten von `Rasen rechts` auf `Rasen links` bleibt die Pumpe eingeschaltet. Zone 4 wird geoeffnet, ihre Verfahrzeit wird abgewartet und danach wird Zone 3 geschlossen.
+- WebFront-Aenderungen fuer Master, Automatik, Startzeiten, Tagesplan und Rasen-Laufzeiten werden in die Instanzkonfiguration zurueckgeschrieben.
+- Die optionale Durchfluss-Variable wird als Liter pro Minute interpretiert. Daraus berechnet das Modul die gefoerderte Wassermenge.
 - Bodenfeuchtewerte werden als Prozentwert erwartet. Ist der Sensorwert größer oder gleich der konfigurierten Schwelle, wird die Zone übersprungen.
 - Die Tagesintervalle werden deterministisch anhand des Tageszählers berechnet. Bei Intervall `2` läuft eine Zone jeden zweiten Tag, bei `3` jeden dritten Tag.
 
