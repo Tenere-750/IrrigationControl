@@ -205,7 +205,7 @@ class Bewaesserungssteuerung extends IPSModule
             $this->SetPump(false);
         }
         IPS_Sleep($this->Seconds($zone['TravelTime']) * 1000);
-        SetValueBoolean((int) $zone['ValveID'], false);
+        $this->SetValve($zone, false);
         SetValueBoolean($this->GetIDForIdent('ManualZone' . $ZoneIndex), false);
         $this->SetStatusText('Zone gestoppt: ' . $zone['Name']);
         $this->UpdatePlannerHtml();
@@ -222,9 +222,7 @@ class Bewaesserungssteuerung extends IPSModule
         IPS_Sleep($this->ReadPropertyInteger('DefaultValveTravelTime') * 1000);
 
         foreach ($this->GetZones() as $zone) {
-            if ((int) $zone['ValveID'] > 0) {
-                SetValueBoolean((int) $zone['ValveID'], false);
-            }
+            $this->SetValve($zone, false);
             $manualIdent = 'ManualZone' . (int) $zone['Index'];
             if ($this->IdentExists($manualIdent)) {
                 SetValueBoolean($this->GetIDForIdent($manualIdent), false);
@@ -262,7 +260,7 @@ class Bewaesserungssteuerung extends IPSModule
                 $this->OpenValve($nextZone);
                 $transitionWait = max($this->Seconds($nextZone['TravelTime']), $this->ReadPropertyInteger('ValveOverlapTime'));
                 IPS_Sleep($transitionWait * 1000);
-                SetValueBoolean((int) $currentZone['ValveID'], false);
+                $this->SetValve($currentZone, false);
             }
 
             $currentZone = $nextZone;
@@ -278,7 +276,7 @@ class Bewaesserungssteuerung extends IPSModule
         $this->SetPump(false);
         if ($currentZone !== null) {
             IPS_Sleep($this->Seconds($currentZone['TravelTime']) * 1000);
-            SetValueBoolean((int) $currentZone['ValveID'], false);
+            $this->SetValve($currentZone, false);
         }
     }
 
@@ -318,17 +316,29 @@ class Bewaesserungssteuerung extends IPSModule
 
     private function OpenValve(array $zone): void
     {
-        SetValueBoolean((int) $zone['ValveID'], true);
+        $this->SetValve($zone, true);
         $cyclesIdent = 'ValveCycles' . (int) $zone['Index'];
         SetValueInteger($this->GetIDForIdent($cyclesIdent), GetValueInteger($this->GetIDForIdent($cyclesIdent)) + 1);
+    }
+
+    private function SetValve(array $zone, bool $state): void
+    {
+        $this->WriteKnxDpt1((int) ($zone['ValveID'] ?? 0), $state);
     }
 
     private function SetPump(bool $state): void
     {
         $pumpID = $this->ReadPropertyInteger('PumpID');
-        if ($pumpID > 0) {
-            SetValueBoolean($pumpID, $state);
+        $this->WriteKnxDpt1($pumpID, $state);
+    }
+
+    private function WriteKnxDpt1(int $instanceID, bool $state): void
+    {
+        if ($instanceID <= 0) {
+            return;
         }
+
+        KNX_WriteDPT1($instanceID, $state);
     }
 
     private function AddPumpRuntime(int $seconds): void

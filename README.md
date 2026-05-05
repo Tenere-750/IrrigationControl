@@ -5,8 +5,8 @@ Dieses Repository enthält ein IP-Symcon-Modul für eine Bewässerungssteuerung 
 ## Funktionen
 
 - 7 frei benennbare Bewässerungszonen
-- Ventil-ID und Verfahrzeit je Zone
-- Pumpen-ID über Boolean-Variable
+- Ventil-KNX-Instanz-ID und Verfahrzeit je Zone
+- Pumpen-KNX-Instanz-ID
 - Master-Switch und Automatik-Switch im WebFront
 - optionaler Bodenfeuchtesensor je Zone
 - manuelle Steuerung einzelner Zonen
@@ -46,7 +46,7 @@ Sequenzwechsel:
 2. In IP-Symcon die Modulverwaltung öffnen.
 3. Die GitLab-Repository-URL als neues Modul hinzufügen.
 4. Eine neue Instanz vom Typ `Bewässerungssteuerung` erstellen.
-5. Pumpen-ID, Ventil-IDs, Namen, Verfahrzeiten, Reihenfolgen und Intervalle konfigurieren.
+5. Pumpen-KNX-Instanz-ID, Ventil-KNX-Instanz-IDs, Namen, Verfahrzeiten, Reihenfolgen und Intervalle konfigurieren.
 
 ## WebFront-Bedienung
 
@@ -68,8 +68,8 @@ Die Kreisliste wird als kommagetrennte Liste gepflegt. Ungültige Werte werden a
 
 ## Hinweise
 
-- Die Pumpen- und Ventilvariablen müssen Boolean-Variablen sein.
-- Die Steuerung verwendet `SetValueBoolean($ID, true)` und `SetValueBoolean($ID, false)`.
+- Die Pumpen- und Ventil-IDs müssen KNX-Instanzen sein, die DPT1-Schalttelegramme annehmen.
+- Die Steuerung verwendet `KNX_WriteDPT1($InstanceID, true)` und `KNX_WriteDPT1($InstanceID, false)`.
 - Bodenfeuchtewerte werden als Prozentwert erwartet. Ist der Sensorwert größer oder gleich der konfigurierten Schwelle, wird die Zone übersprungen.
 - Die Tagesintervalle werden deterministisch anhand des Tageszählers berechnet. Bei Intervall `2` läuft eine Zone jeden zweiten Tag, bei `3` jeden dritten Tag.
 

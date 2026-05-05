@@ -103,10 +103,13 @@
           }
         },
         {
-          "caption": "Ventil-ID",
+          "caption": "Ventil KNX-Instanz-ID",
           "name": "ValveID",
           "width": "120px",
-          "add": 0
+          "add": 0,
+          "edit": {
+            "type": "SelectInstance"
+          }
         },
         {
           "caption": "Verfahrzeit (s)",
@@ -211,10 +214,9 @@
       ]
     },
     {
-      "type": "SelectVariable",
+      "type": "SelectInstance",
       "name": "PumpID",
-      "caption": "Pumpen-ID",
-      "validVariableTypes": [0]
+      "caption": "Pumpen KNX-Instanz-ID"
     }
   ],
   "actions": [
