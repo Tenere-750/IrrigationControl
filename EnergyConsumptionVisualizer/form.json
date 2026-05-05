@@ -1,0 +1,149 @@
+{
+    "elements": [
+        {
+            "type": "NumberSpinner",
+            "name": "ArchiveID",
+            "caption": "Archive Control ID"
+        },
+        {
+            "type": "Label",
+            "caption": "Hauptzaehler"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "L1VariableID",
+            "caption": "Variable ID L1"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "L2VariableID",
+            "caption": "Variable ID L2"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "L3VariableID",
+            "caption": "Variable ID L3"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "TotalVariableID",
+            "caption": "Variable ID Gesamt"
+        },
+        {
+            "type": "Select",
+            "name": "DefaultPeriod",
+            "caption": "Standard-Zeitraum",
+            "options": [
+                {
+                    "caption": "Stunde",
+                    "value": "hour"
+                },
+                {
+                    "caption": "Tag",
+                    "value": "day"
+                },
+                {
+                    "caption": "Woche",
+                    "value": "week"
+                },
+                {
+                    "caption": "Jahr",
+                    "value": "year"
+                },
+                {
+                    "caption": "Eigener Zeitraum",
+                    "value": "custom"
+                }
+            ]
+        },
+        {
+            "type": "ValidationTextBox",
+            "name": "CustomStart",
+            "caption": "Eigener Zeitraum Start",
+            "placeholder": "2026-01-01 00:00"
+        },
+        {
+            "type": "ValidationTextBox",
+            "name": "CustomEnd",
+            "caption": "Eigener Zeitraum Ende",
+            "placeholder": "2026-12-31 23:59"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "ForecastDays",
+            "caption": "Prognose-Tage",
+            "minimum": 1,
+            "maximum": 365
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "HistoryDays",
+            "caption": "Historie fuer Prognose in Tagen",
+            "minimum": 7,
+            "maximum": 1095
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Weitere Verbraucher",
+            "items": [
+                {
+                    "type": "List",
+                    "name": "Consumers",
+                    "caption": "Bis zu 10 Verbraucher",
+                    "rowCount": 10,
+                    "add": true,
+                    "delete": true,
+                    "sort": {
+                        "column": "Name",
+                        "direction": "ascending"
+                    },
+                    "columns": [
+                        {
+                            "caption": "Name",
+                            "name": "Name",
+                            "width": "260px",
+                            "add": ""
+                        },
+                        {
+                            "caption": "Variable ID",
+                            "name": "VariableID",
+                            "width": "160px",
+                            "add": 0
+                        },
+                        {
+                            "caption": "Aktiv",
+                            "name": "Active",
+                            "width": "120px",
+                            "add": true
+                        }
+                    ],
+                    "values": []
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Jetzt aktualisieren",
+            "onClick": "ECV_Refresh($id);"
+        }
+    ],
+    "status": [
+        {
+            "code": 102,
+            "icon": "active",
+            "caption": "Instanz ist aktiv"
+        },
+        {
+            "code": 201,
+            "icon": "error",
+            "caption": "Archive Control ID ist ungueltig"
+        },
+        {
+            "code": 202,
+            "icon": "error",
+            "caption": "Mindestens eine Variable ist ungueltig oder nicht archiviert"
+        }
+    ]
+}
