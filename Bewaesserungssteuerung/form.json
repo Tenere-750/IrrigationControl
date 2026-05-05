@@ -43,7 +43,7 @@
     {
       "type": "NumberSpinner",
       "name": "MorningDuration",
-      "caption": "Standard-Laufzeit pro Kreis morgens",
+      "caption": "Fallback-Laufzeit pro Kreis morgens",
       "suffix": " Minuten",
       "minimum": 1,
       "maximum": 240
@@ -51,7 +51,7 @@
     {
       "type": "NumberSpinner",
       "name": "EveningDuration",
-      "caption": "Standard-Laufzeit pro Kreis abends",
+      "caption": "Fallback-Laufzeit pro Kreis abends",
       "suffix": " Minuten",
       "minimum": 1,
       "maximum": 240
@@ -118,6 +118,18 @@
           "add": 7
         },
         {
+          "caption": "Laufzeit morgens (min)",
+          "name": "MorningDuration",
+          "width": "150px",
+          "add": 10
+        },
+        {
+          "caption": "Laufzeit abends (min)",
+          "name": "EveningDuration",
+          "width": "150px",
+          "add": 10
+        },
+        {
           "caption": "Feuchte-ID optional",
           "name": "SoilMoistureID",
           "width": "140px",
@@ -149,13 +161,13 @@
         }
       ],
       "values": [
-        { "Index": 1, "Name": "Zone 1", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 1, "EveningOrder": 1 },
-        { "Index": 2, "Name": "Zone 2", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 2, "EveningOrder": 2 },
-        { "Index": 3, "Name": "Zone 3", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 3, "EveningOrder": 3 },
-        { "Index": 4, "Name": "Zone 4", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 4, "EveningOrder": 4 },
-        { "Index": 5, "Name": "Zone 5", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 5, "EveningOrder": 5 },
-        { "Index": 6, "Name": "Zone 6", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 6, "EveningOrder": 6 },
-        { "Index": 7, "Name": "Zone 7", "Enabled": true, "ValveID": 0, "TravelTime": 7, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 7, "EveningOrder": 7 }
+        { "Index": 1, "Name": "Zone 1", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 1, "EveningOrder": 1 },
+        { "Index": 2, "Name": "Zone 2", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 2, "EveningOrder": 2 },
+        { "Index": 3, "Name": "Rasen rechts", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 3, "EveningOrder": 3 },
+        { "Index": 4, "Name": "Rasen links", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 4, "EveningOrder": 4 },
+        { "Index": 5, "Name": "Zone 5", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 5, "EveningOrder": 5 },
+        { "Index": 6, "Name": "Zone 6", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 6, "EveningOrder": 6 },
+        { "Index": 7, "Name": "Zone 7", "Enabled": true, "ValveID": 0, "TravelTime": 7, "MorningDuration": 10, "EveningDuration": 10, "SoilMoistureID": 0, "MorningInterval": 1, "EveningInterval": 1, "MorningOrder": 7, "EveningOrder": 7 }
       ]
     },
     {
