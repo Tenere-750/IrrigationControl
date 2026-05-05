@@ -529,7 +529,37 @@ class Bewaesserungssteuerung extends IPSModule
     private function GetZones(): array
     {
         $zones = json_decode($this->ReadPropertyString('Zones'), true);
-        return is_array($zones) ? $zones : $this->DefaultZones();
+        if (!is_array($zones)) {
+            return $this->DefaultZones();
+        }
+
+        return $this->NormalizeZones($zones);
+    }
+
+    private function NormalizeZones(array $zones): array
+    {
+        $defaults = $this->DefaultZones();
+        $normalized = [];
+
+        for ($i = 1; $i <= self::ZONE_COUNT; $i++) {
+            $zone = $zones[$i - 1] ?? [];
+            if (!is_array($zone)) {
+                $zone = [];
+            }
+
+            $index = (int) ($zone['Index'] ?? $i);
+            if ($index < 1 || $index > self::ZONE_COUNT) {
+                $index = $i;
+            }
+
+            $normalized[] = array_merge($defaults[$index - 1], $zone, ['Index' => $index]);
+        }
+
+        usort($normalized, static function (array $a, array $b): int {
+            return ((int) $a['Index']) <=> ((int) $b['Index']);
+        });
+
+        return $normalized;
     }
 
     private function GetDayPlan(): array
