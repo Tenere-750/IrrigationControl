@@ -1,12 +1,10 @@
 {
-  "id": "{1C7BFC6A-F3D6-4A43-9A05-8A737CF362D2}",
-  "author": "J. Bucholzki",
-  "name": "Bewässerungssteuerung",
-  "url": "",
-  "compatibility": {
-    "version": "9.0"
-  },
-  "version": "1.06",
-  "build": 1,
-  "date": 1799020800
+    "id": "{8F4B2C1A-7E3D-4A5B-9C6D-1F2E3A4B5C6D}",
+    "author": "",
+    "name": "Bewaesserung",
+    "description": "Bewässerungssteuerung (KNX) mit Motorkugelhähnen, Pumpe, Rasen-Zusammenlegung, optionalem Bodenfeuchtesensor, zwei Tages-Sequenzen und Intervallsteuerung pro Zone",
+    "url": "",
+    "version": "2.4.1",
+    "build": 8,
+    "date": 0
 }
